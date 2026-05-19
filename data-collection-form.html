@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Member Registration — Church Scheduler</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Barlow', sans-serif; background: #fff; color: #0a0a0a; line-height: 1.5; padding: 2rem; }
+    h1, h2, h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
+    .container { max-width: 800px; margin: 0 auto; }
+
+    .header { text-align: center; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 3px solid #0a0a0a; }
+    .header h1 { font-size: 2.5rem; }
+    .header p { color: #555; margin-top: 0.3rem; font-size: 0.9rem; }
+
+    .instructions { background: #f5f5f5; border: 1.5px solid #0a0a0a; padding: 1.25rem; margin-bottom: 2rem; font-size: 0.85rem; }
+    .instructions strong { text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.06em; }
+    .instructions ul { margin-top: 0.5rem; padding-left: 1.2rem; }
+    .instructions li { margin-bottom: 0.25rem; }
+
+    .member-block { border: 1.5px solid #0a0a0a; padding: 1.5rem; margin-bottom: 1.5rem; page-break-inside: avoid; }
+    .member-block h3 { font-size: 1.2rem; margin-bottom: 1rem; border-bottom: 2px solid #0a0a0a; padding-bottom: 0.3rem; }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.8rem; }
+    .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+    .field { }
+    .field label { display: block; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.25rem; color: #555; }
+    .field .line { border-bottom: 1.5px solid #ccc; min-height: 1.6rem; padding: 0.2rem 0; font-size: 0.9rem; }
+
+    .skills-section { margin-top: 1rem; }
+    .skills-section h4 { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; color: #555; }
+
+    .skills-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+    .skill-item { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.6rem; border: 1px solid #ddd; font-size: 0.8rem; }
+    .skill-item .name { font-weight: 600; }
+    .skill-item .circles { display: flex; gap: 3px; }
+    .skill-item .circles span { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #0a0a0a; display: inline-block; }
+
+    .footer { text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1.5px solid #ccc; font-size: 0.78rem; color: #999; }
+
+    @media print {
+      body { padding: 0.5cm; font-size: 11pt; }
+      .member-block { border-width: 1px; padding: 1rem; margin-bottom: 1rem; }
+      .no-print { display: none; }
+    }
+    @media (max-width: 600px) {
+      body { padding: 1rem; }
+      .field-row { grid-template-columns: 1fr; }
+      .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+      .skills-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Member Registration Form</h1>
+      <p>Church Service Unit — Scheduling System</p>
+    </div>
+
+    <div class="instructions">
+      <strong>Instructions</strong>
+      <ul>
+        <li><strong>Full Name</strong> — as you'd like it displayed on the duty roster</li>
+        <li><strong>Phone</strong> — WhatsApp-enabled number preferred (for notifications)</li>
+        <li><strong>Gender</strong> — M or F (some positions require male members)</li>
+        <li><strong>Own a Suit?</strong> — Yes or No (some positions require formal attire)</li>
+        <li><strong>Skills</strong> — fill in the circles to rate yourself: 1 = still learning, 5 = very experienced. Leave blank if you've never done that role.</li>
+      </ul>
+    </div>
+
+    <div id="forms-container"></div>
+
+    <div class="no-print" style="text-align:center; margin: 2rem 0;">
+      <button onclick="window.print()" style="padding:0.7rem 2rem; background:#0a0a0a; color:#fff; border:none; font-family:'Barlow',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.06em;">Print / Save as PDF</button>
+    </div>
+
+    <div class="footer">
+      Church Scheduler — Member Data Collection Form
+    </div>
+  </div>
+
+  <script>
+    const POSITIONS = [
+      { key: "DOOR", label: "Door" },
+      { key: "STANDING", label: "Standing" },
+      { key: "USHER", label: "Usher" },
+      { key: "OVERFLOW", label: "Overflow" },
+      { key: "ESCORT", label: "Escort" },
+      { key: "CHAIRS", label: "Chairs" },
+    ];
+
+    function createMemberBlock(num) {
+      const skillsHtml = POSITIONS.map(p =>
+        `<div class="skill-item">
+          <span class="name">${p.label}</span>
+          <div class="circles">
+            ${[1,2,3,4,5].map(() => `<span></span>`).join("")}
+          </div>
+        </div>`
+      ).join("");
+
+      return `
+        <div class="member-block">
+          <h3>Member #${num}</h3>
+          <div class="field-row">
+            <div class="field">
+              <label>Full Name</label>
+              <div class="line"></div>
+            </div>
+            <div class="field">
+              <label>Phone Number</label>
+              <div class="line"></div>
+            </div>
+          </div>
+          <div class="field-row three">
+            <div class="field">
+              <label>Gender (M / F)</label>
+              <div class="line"></div>
+            </div>
+            <div class="field">
+              <label>Own a Suit? (Yes / No)</label>
+              <div class="line"></div>
+            </div>
+            <div class="field">
+              <label>Email (optional)</label>
+              <div class="line"></div>
+            </div>
+          </div>
+          <div class="skills-section">
+            <h4>Skills — fill circles: 1 (learning) to 5 (expert)</h4>
+            <div class="skills-grid">${skillsHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    const container = document.getElementById("forms-container");
+    for (let i = 1; i <= 20; i++) {
+      container.innerHTML += createMemberBlock(i);
+    }
+  </script>
+</body>
+</html>

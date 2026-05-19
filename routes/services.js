@@ -18,6 +18,8 @@ router.get("/", async (req, res) => {
 router.post("/", requireRole("owner", "admin"), async (req, res) => {
   const { date, service_type, name } = req.body;
   if (!date || !service_type) return res.status(400).json({ error: "Date and type are required" });
+  const existing = await Service.findOne({ unit: req.unit._id, date, service_type });
+  if (existing) return res.status(409).json({ error: `A ${service_type} service already exists on ${date}` });
   const service = await Service.create({ unit: req.unit._id, date, service_type, name });
   res.status(201).json(service);
 });

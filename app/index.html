@@ -11,7 +11,7 @@
   <aside class="sidebar">
     <div class="sidebar-brand">
       <h1>Church<br>Scheduler</h1>
-      <p>Crowd Control Unit</p>
+      <p>Service Unit Scheduler</p>
     </div>
     <nav class="sidebar-nav">
       <a class="nav-link active" data-page="dashboard">
@@ -139,7 +139,7 @@
           <div class="card-header">
             <h3 id="schedule-detail-title">Schedule</h3>
             <div class="btn-group">
-              <button class="btn btn-warning btn-sm" onclick="regenerateSchedule()">Re-generate</button>
+              <button class="btn btn-warning btn-sm" onclick="regenerateSchedule(this)">Re-generate</button>
               <button class="btn btn-primary btn-sm" id="btn-publish" onclick="publishSchedule()">Publish</button>
             </div>
           </div>
@@ -149,7 +149,7 @@
             <div id="schedule-empty" class="empty-state" style="display:none">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
               <p>No assignments. Generate a schedule.</p>
-              <button class="btn btn-primary" onclick="generateCurrentSchedule()">Generate</button>
+              <button class="btn btn-primary" onclick="generateCurrentSchedule(this)">Generate</button>
             </div>
           </div>
         </div>
@@ -406,6 +406,7 @@
     </div>
   </div>
 
+  <div class="toast-container" id="toast-container"></div>
   <script src="/app/app.js"></script>
 </body>
 </html>

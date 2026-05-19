@@ -5,6 +5,7 @@ let currentUser = null;
 let currentMemberships = [];
 let activeUnitId = null;
 let activeRole = null;
+const _busyOps = new Set();
 
 const pageTitles = {
   dashboard: "Dashboard",
@@ -16,6 +17,56 @@ const pageTitles = {
 };
 
 let aiHistory = [];
+
+function toast(message, type = "info", duration = 3000) {
+  const container = document.getElementById("toast-container");
+  const el = document.createElement("div");
+  el.className = `toast toast-${type}`;
+  const icons = {
+    success: "&#10003;",
+    error: "&#10007;",
+    warning: "&#9888;",
+    info: "&#8505;",
+  };
+  el.innerHTML = `<span>${icons[type] || ""}</span> ${esc(message)}`;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add("toast-out");
+    setTimeout(() => el.remove(), 200);
+  }, duration);
+}
+
+function showLoading(text = "Loading...") {
+  let overlay = document.getElementById("global-loading");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "global-loading";
+    overlay.className = "loading-overlay";
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `<div class="loader"><span></span><span></span><span></span></div><div class="loading-text">${esc(text)}</div>`;
+  overlay.style.display = "flex";
+}
+
+function hideLoading() {
+  const overlay = document.getElementById("global-loading");
+  if (overlay) overlay.style.display = "none";
+}
+
+function setBtnLoading(btn, loading) {
+  if (!btn) return;
+  if (loading) {
+    btn.classList.add("is-loading");
+    btn.dataset.origText = btn.textContent;
+  } else {
+    btn.classList.remove("is-loading");
+    if (btn.dataset.origText) btn.textContent = btn.dataset.origText;
+  }
+}
+
+function isBusy(key) { return _busyOps.has(key); }
+function markBusy(key) { _busyOps.add(key); }
+function clearBusy(key) { _busyOps.delete(key); }
 
 function getToken() {
   return localStorage.getItem("auth_token");
@@ -49,7 +100,12 @@ async function api(path, method = "GET", body = null) {
   }
   if (res.status === 403) {
     const data = await res.json();
-    alert(data.error || "You don't have permission for this action.");
+    toast(data.error || "You don't have permission for this action.", "error");
+    return null;
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    toast(data.error || "Something went wrong.", "error");
     return null;
   }
   return res.json();
@@ -420,35 +476,45 @@ async function saveMember() {
     active: true,
   };
 
-  if (!data.name) return alert("Name is required");
+  if (!data.name) return toast("Name is required", "warning");
 
-  let memberId;
-  if (id) {
-    const existing = membersCache.find((m) => m._id === id);
-    data.active = existing ? existing.active : true;
-    await api(`/members/${id}`, "PUT", data);
-    memberId = id;
-  } else {
-    const result = await api("/members", "POST", data);
-    if (!result) return;
-    memberId = result._id;
+  const btn = document.querySelector("#member-modal .modal-footer .btn-primary");
+  setBtnLoading(btn, true);
+
+  try {
+    let memberId;
+    if (id) {
+      const existing = membersCache.find((m) => m._id === id);
+      data.active = existing ? existing.active : true;
+      const result = await api(`/members/${id}`, "PUT", data);
+      if (!result) return;
+      memberId = id;
+    } else {
+      const result = await api("/members", "POST", data);
+      if (!result) return;
+      memberId = result._id;
+    }
+
+    const skills = [];
+    document.querySelectorAll("#skill-ratings .stars").forEach((starGroup) => {
+      const filled = starGroup.querySelectorAll(".filled").length;
+      skills.push({ position_type: starGroup.dataset.position, rating: filled || 1 });
+    });
+    await api(`/members/${memberId}/skills`, "PUT", { skills });
+
+    closeMemberModal();
+    toast(id ? "Member updated" : "Member added", "success");
+    loadMembers();
+    loadDashboard();
+  } finally {
+    setBtnLoading(btn, false);
   }
-
-  const skills = [];
-  document.querySelectorAll("#skill-ratings .stars").forEach((starGroup) => {
-    const filled = starGroup.querySelectorAll(".filled").length;
-    skills.push({ position_type: starGroup.dataset.position, rating: filled || 1 });
-  });
-  await api(`/members/${memberId}/skills`, "PUT", { skills });
-
-  closeMemberModal();
-  loadMembers();
-  loadDashboard();
 }
 
 async function deleteMember(id, name) {
   if (!confirm(`Delete ${name}?`)) return;
-  await api(`/members/${id}`, "DELETE");
+  const result = await api(`/members/${id}`, "DELETE");
+  if (result) toast(`${name} removed`, "success");
   loadMembers();
   loadDashboard();
 }
@@ -505,16 +571,26 @@ async function saveService() {
     service_type: document.getElementById("s-type").value,
     name: document.getElementById("s-name").value.trim(),
   };
-  if (!data.date || !data.service_type) return alert("Date and type are required");
-  await api("/services", "POST", data);
-  closeServiceModal();
-  loadServices();
-  loadDashboard();
+  if (!data.date || !data.service_type) return toast("Date and type are required", "warning");
+
+  const btn = document.querySelector("#service-modal .modal-footer .btn-primary");
+  setBtnLoading(btn, true);
+  try {
+    const result = await api("/services", "POST", data);
+    if (!result) return;
+    closeServiceModal();
+    toast("Service created", "success");
+    loadServices();
+    loadDashboard();
+  } finally {
+    setBtnLoading(btn, false);
+  }
 }
 
 async function deleteService(id) {
-  if (!confirm("Delete this service?")) return;
-  await api(`/services/${id}`, "DELETE");
+  if (!confirm("Delete this service and all its assignments?")) return;
+  const result = await api(`/services/${id}`, "DELETE");
+  if (result) toast("Service deleted", "success");
   currentServiceId = null;
   document.getElementById("schedule-detail").style.display = "none";
   loadServices();
@@ -606,23 +682,38 @@ async function loadAssignments(serviceId) {
     .join("");
 }
 
-async function generateCurrentSchedule() {
+async function generateCurrentSchedule(btn) {
   if (!currentServiceId) return;
-  const result = await api(`/services/${currentServiceId}/generate`, "POST");
-  if (!result) return;
-  if (result.warnings && result.warnings.length > 0) {
-    document.getElementById("schedule-warnings").innerHTML =
-      `<div class="alert alert-warning">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        ${result.warnings.join("; ")}
-      </div>`;
+  if (isBusy("generate")) return toast("Schedule generation in progress...", "warning");
+  markBusy("generate");
+
+  showLoading("Generating schedule...");
+  if (btn) setBtnLoading(btn, true);
+
+  try {
+    const result = await api(`/services/${currentServiceId}/generate`, "POST");
+    if (!result) return;
+    if (result.warnings && result.warnings.length > 0) {
+      document.getElementById("schedule-warnings").innerHTML =
+        `<div class="alert alert-warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          ${result.warnings.join("; ")}
+        </div>`;
+      toast("Schedule generated with warnings", "warning");
+    } else {
+      toast(`Schedule generated — ${result.assignments.length} assigned`, "success");
+    }
+    await loadAssignments(currentServiceId);
+  } finally {
+    hideLoading();
+    if (btn) setBtnLoading(btn, false);
+    clearBusy("generate");
   }
-  await loadAssignments(currentServiceId);
 }
 
-async function regenerateSchedule() {
-  if (!confirm("Replace current schedule?")) return;
-  await generateCurrentSchedule();
+async function regenerateSchedule(btn) {
+  if (!confirm("Replace current schedule with a new one?")) return;
+  await generateCurrentSchedule(btn);
 }
 
 async function publishSchedule() {
@@ -631,9 +722,16 @@ async function publishSchedule() {
   if (!services) return;
   const service = services.find((s) => s._id === currentServiceId);
   const newStatus = service.status === "published" ? "draft" : "published";
-  await api(`/services/${currentServiceId}/status`, "PUT", { status: newStatus });
-  viewSchedule(currentServiceId);
-  loadServices();
+  const btn = document.getElementById("btn-publish");
+  setBtnLoading(btn, true);
+  try {
+    await api(`/services/${currentServiceId}/status`, "PUT", { status: newStatus });
+    toast(newStatus === "published" ? "Schedule published" : "Schedule unpublished", "success");
+    viewSchedule(currentServiceId);
+    loadServices();
+  } finally {
+    setBtnLoading(btn, false);
+  }
 }
 
 // --- Smart Replacement ---
@@ -700,20 +798,27 @@ function selectReplacement(memberId, el) {
 
 async function confirmReplace() {
   if (!replaceState.selectedId) return;
+  const btn = document.getElementById("btn-confirm-replace");
+  setBtnLoading(btn, true);
 
-  const services = await api("/services");
-  if (!services) return;
-  const service = services.find((s) => s._id === currentServiceId);
+  try {
+    const services = await api("/services");
+    if (!services) return;
+    const service = services.find((s) => s._id === currentServiceId);
 
-  await api(`/services/${currentServiceId}/replace`, "POST", {
-    assignment_id: replaceState.assignmentId,
-    new_member_id: replaceState.selectedId,
-    old_member_id: replaceState.memberId,
-    date: service.date,
-  });
+    const result = await api(`/services/${currentServiceId}/replace`, "POST", {
+      assignment_id: replaceState.assignmentId,
+      new_member_id: replaceState.selectedId,
+      old_member_id: replaceState.memberId,
+      date: service.date,
+    });
 
-  closeReplaceModal();
-  await loadAssignments(currentServiceId);
+    if (result) toast("Replacement confirmed", "success");
+    closeReplaceModal();
+    await loadAssignments(currentServiceId);
+  } finally {
+    setBtnLoading(btn, false);
+  }
 }
 
 function closeReplaceModal() {
@@ -791,13 +896,20 @@ function closeSwapModal() {
 async function saveSwap() {
   const id = document.getElementById("swap-assignment-id").value;
   const memberId = document.getElementById("swap-member").value;
-  if (!memberId) return alert("Select a member");
-  await api(`/services/assignments/${id}`, "PUT", {
-    member_id: memberId,
-    position_type: document.getElementById("swap-position").value,
-  });
-  closeSwapModal();
-  loadAssignments(currentServiceId);
+  if (!memberId) return toast("Select a member", "warning");
+  const btn = document.querySelector("#swap-modal .modal-footer .btn-primary");
+  setBtnLoading(btn, true);
+  try {
+    const result = await api(`/services/assignments/${id}`, "PUT", {
+      member_id: memberId,
+      position_type: document.getElementById("swap-position").value,
+    });
+    if (result) toast("Assignment swapped", "success");
+    closeSwapModal();
+    loadAssignments(currentServiceId);
+  } finally {
+    setBtnLoading(btn, false);
+  }
 }
 
 document.addEventListener("click", (e) => {
@@ -807,7 +919,8 @@ document.addEventListener("click", (e) => {
 });
 
 async function removeAssignment(id) {
-  await api(`/services/assignments/${id}`, "DELETE");
+  const result = await api(`/services/assignments/${id}`, "DELETE");
+  if (result) toast("Assignment removed", "success");
   loadAssignments(currentServiceId);
 }
 
@@ -817,15 +930,24 @@ async function quickGenerate() {
   const date = document.getElementById("quick-date").value;
   const type = document.getElementById("quick-type").value;
   const name = document.getElementById("quick-name").value.trim();
-  if (!date || !type) return alert("Date and type are required");
+  if (!date || !type) return toast("Date and type are required", "warning");
+  if (isBusy("quickgen")) return toast("Already generating...", "warning");
+  markBusy("quickgen");
 
-  const service = await api("/services", "POST", { date, service_type: type, name });
-  if (!service) return;
-  await api(`/services/${service._id}/generate`, "POST");
+  showLoading("Creating service & generating schedule...");
+  try {
+    const service = await api("/services", "POST", { date, service_type: type, name });
+    if (!service) return;
+    await api(`/services/${service._id}/generate`, "POST");
 
-  showPage("schedule");
-  await loadServices();
-  viewSchedule(service._id);
+    toast("Schedule created", "success");
+    showPage("schedule");
+    await loadServices();
+    viewSchedule(service._id);
+  } finally {
+    hideLoading();
+    clearBusy("quickgen");
+  }
 }
 
 // --- Settings ---
@@ -852,16 +974,22 @@ async function loadSettings() {
 }
 
 async function savePositionCounts() {
-  const byService = {};
-  document.querySelectorAll(".pc-input").forEach((inp) => {
-    const sType = inp.dataset.service;
-    if (!byService[sType]) byService[sType] = [];
-    byService[sType].push({ position_type: inp.dataset.position, count: parseInt(inp.value) || 0 });
-  });
-  for (const [sType, counts] of Object.entries(byService)) {
-    await api(`/settings/position-counts/${sType}`, "PUT", { counts });
+  const btn = document.querySelector("#page-settings .card-header .btn-primary");
+  setBtnLoading(btn, true);
+  try {
+    const byService = {};
+    document.querySelectorAll(".pc-input").forEach((inp) => {
+      const sType = inp.dataset.service;
+      if (!byService[sType]) byService[sType] = [];
+      byService[sType].push({ position_type: inp.dataset.position, count: parseInt(inp.value) || 0 });
+    });
+    for (const [sType, counts] of Object.entries(byService)) {
+      await api(`/settings/position-counts/${sType}`, "PUT", { counts });
+    }
+    toast("Position counts saved", "success");
+  } finally {
+    setBtnLoading(btn, false);
   }
-  alert("Saved.");
 }
 
 // --- AI Reports ---
@@ -986,20 +1114,22 @@ async function loadProfile() {
 async function saveProfile() {
   const name = document.getElementById("p-name").value.trim();
   const phone = document.getElementById("p-phone").value.trim();
-  if (!name) return alert("Name is required");
-  await api("/auth/profile", "PUT", { name, phone });
-  currentUser.name = name;
-  renderUserInfo();
-  alert("Profile updated.");
+  if (!name) return toast("Name is required", "warning");
+  const result = await api("/auth/profile", "PUT", { name, phone });
+  if (result) {
+    currentUser.name = name;
+    renderUserInfo();
+    toast("Profile updated", "success");
+  }
 }
 
 async function changePassword() {
   const current = document.getElementById("p-current-pw").value;
   const newPw = document.getElementById("p-new-pw").value;
-  if (!newPw || newPw.length < 6) return alert("New password must be at least 6 characters");
+  if (!newPw || newPw.length < 6) return toast("New password must be at least 6 characters", "warning");
   const result = await api("/auth/change-password", "POST", { current_password: current, new_password: newPw });
   if (result && result.success) {
-    alert("Password changed.");
+    toast("Password changed", "success");
     document.getElementById("p-current-pw").value = "";
     document.getElementById("p-new-pw").value = "";
   }
@@ -1007,7 +1137,7 @@ async function changePassword() {
 
 async function joinUnit() {
   const code = document.getElementById("join-code").value.trim();
-  if (!code) return alert("Enter an invite code");
+  if (!code) return toast("Enter an invite code", "warning");
   const result = await api("/units/join", "POST", { invite_code: code });
   if (result && result._id) {
     const meData = await api("/auth/me");
@@ -1017,14 +1147,14 @@ async function joinUnit() {
     }
     document.getElementById("join-code").value = "";
     loadProfile();
-    alert(`Joined "${result.name}"!`);
+    toast(`Joined "${result.name}"!`, "success");
   }
 }
 
 function copyInviteCode() {
   const code = document.getElementById("unit-invite-code").textContent;
   navigator.clipboard.writeText(code);
-  alert("Copied!");
+  toast("Invite code copied", "success");
 }
 
 async function regenerateInvite() {
@@ -1064,7 +1194,8 @@ async function changeRole(membershipId, role) {
 
 async function removeUnitMember(membershipId, name) {
   if (!confirm(`Remove ${name} from this unit?`)) return;
-  await api(`/units/${activeUnitId}/members/${membershipId}`, "DELETE");
+  const result = await api(`/units/${activeUnitId}/members/${membershipId}`, "DELETE");
+  if (result) toast(`${name} removed from unit`, "success");
   loadUnitMembers();
 }
 
