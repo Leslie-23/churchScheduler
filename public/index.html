@@ -33,7 +33,7 @@
 
   <section class="hero">
     <div class="container">
-      <h1>Stop Scheduling<br>in <span class="accent typer" id="typer"></span><span class="cursor">|</span></h1>
+      <h1>Duty Rosters,<br><span class="accent">Done Right.</span></h1>
       <p>Stewardly builds fair, skill-based duty rosters for your church service unit in seconds. Not hours. Not in a group chat.</p>
       <div class="cta-group">
         <a href="/signup.html" class="btn btn-primary">Get Started Free</a>
@@ -211,51 +211,6 @@
       window.location.href = "/app";
     }
 
-    (function () {
-      const phrases = [
-        "WhatsApp Groups",
-        "Spreadsheets",
-        "Phone Calls",
-        "Last-Minute Texts",
-        "Guesswork",
-        "Group Chats",
-      ];
-      const el = document.getElementById("typer");
-      let phraseIdx = 0;
-      let charIdx = 0;
-      let deleting = false;
-      const typeSpeed = 80;
-      const deleteSpeed = 40;
-      const pauseAfterType = 2000;
-      const pauseAfterDelete = 400;
-
-      function tick() {
-        const current = phrases[phraseIdx];
-
-        if (!deleting) {
-          el.textContent = current.slice(0, charIdx + 1);
-          charIdx++;
-          if (charIdx === current.length) {
-            deleting = true;
-            setTimeout(tick, pauseAfterType);
-            return;
-          }
-          setTimeout(tick, typeSpeed);
-        } else {
-          el.textContent = current.slice(0, charIdx - 1);
-          charIdx--;
-          if (charIdx === 0) {
-            deleting = false;
-            phraseIdx = (phraseIdx + 1) % phrases.length;
-            setTimeout(tick, pauseAfterDelete);
-            return;
-          }
-          setTimeout(tick, deleteSpeed);
-        }
-      }
-
-      tick();
-    })();
   </script>
 </body>
 </html>
