@@ -577,6 +577,57 @@ tr:hover td { background: var(--gray-50); }
 .badge-inactive { background: var(--white); color: var(--gray-400); border-color: var(--gray-400); }
 .badge-draft { background: var(--white); color: var(--black); }
 .badge-published { background: var(--black); color: var(--white); }
+.badge-present { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+.badge-absent { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+.badge-excused { background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow); }
+.badge-pending { background: var(--gray-50); color: var(--gray-400); border-color: var(--gray-200); }
+
+.attendance-toggle {
+  display: inline-flex;
+  gap: 2px;
+  font-size: 0.65rem;
+}
+
+.attendance-toggle button {
+  padding: 0.2rem 0.45rem;
+  border: 1.5px solid var(--gray-200);
+  background: var(--white);
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: all 0.1s;
+}
+
+.attendance-toggle button:hover { border-color: var(--black); }
+.attendance-toggle button.att-present { background: var(--green); color: #fff; border-color: var(--green); }
+.attendance-toggle button.att-absent { background: var(--red); color: #fff; border-color: var(--red); }
+.attendance-toggle button.att-excused { background: var(--yellow); color: #fff; border-color: var(--yellow); }
+
+.attendance-bar {
+  height: 6px;
+  background: var(--gray-200);
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.attendance-bar-fill {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.follow-up-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 0.85rem;
+}
+
+.follow-up-item:last-child { border-bottom: none; }
 
 /* ===== STARS ===== */
 .stars { display: inline-flex; gap: 2px; cursor: pointer; }

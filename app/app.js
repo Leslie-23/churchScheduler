@@ -307,6 +307,45 @@ async function loadDashboard() {
       })
       .join("");
   }
+
+  if (activeRole === "owner" || activeRole === "admin") {
+    loadFollowUp();
+  }
+}
+
+async function loadFollowUp() {
+  const card = document.getElementById("followup-card");
+  const list = document.getElementById("followup-list");
+  if (!card || !list) return;
+
+  list.innerHTML = '<div class="loading-spinner" style="padding:1rem"></div>';
+  card.style.display = "block";
+
+  const flagged = await api("/members/flagged/follow-up");
+  if (!flagged || flagged.length === 0) {
+    card.style.display = "none";
+    return;
+  }
+
+  list.innerHTML = flagged
+    .map(
+      (m) => `
+      <div class="follow-up-item">
+        <div>
+          <strong>${esc(m.name)}</strong>
+          <div style="font-size:.85rem;color:#666">${m.recent_absent} absent of last ${m.total_checked} services</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <div class="attendance-bar" style="width:80px">
+            <div class="attendance-bar-fill" style="width:${m.rate}%;background:${m.rate < 50 ? "var(--red)" : "var(--yellow)"}"></div>
+          </div>
+          <span style="font-weight:700;color:${m.rate < 50 ? "var(--red)" : "var(--yellow)"}">${m.rate}%</span>
+          ${m.phone ? `<a href="tel:${esc(m.phone)}" style="font-size:.85rem">&#9742; Call</a>` : ""}
+        </div>
+      </div>
+    `
+    )
+    .join("");
 }
 
 function goToService(id) {
@@ -380,9 +419,10 @@ async function toggleMemberDetail(id, rowEl) {
   detailRow.classList.add("active");
 
   const content = document.getElementById("detail-content-" + id);
-  const [skills, history] = await Promise.all([
+  const [skills, history, attendance] = await Promise.all([
     api(`/members/${id}/skills`),
     api(`/members/${id}/history`),
+    api(`/members/${id}/attendance`),
   ]);
 
   const member = membersCache.find((m) => m._id === id);
@@ -396,12 +436,23 @@ async function toggleMemberDetail(id, rowEl) {
     })
     .join("");
 
+  const attColor = attendance && attendance.rate !== null
+    ? (attendance.rate >= 80 ? "var(--green)" : attendance.rate >= 60 ? "var(--yellow)" : "var(--red)")
+    : "var(--gray-400)";
+  const attHtml = attendance && attendance.rate !== null
+    ? `<div style="font-family:var(--font-display); font-size:2rem; color:${attColor}">${attendance.rate}%</div>
+       <div style="font-size:0.7rem; color:var(--gray-600)">${attendance.present} present &middot; ${attendance.absent} absent &middot; ${attendance.excused} excused</div>
+       <div class="attendance-bar"><div class="attendance-bar-fill" style="width:${attendance.rate}%; background:${attColor}"></div></div>`
+    : '<span style="color:var(--gray-400); font-size:0.78rem">No attendance data yet</span>';
+
   const historyHtml = history && history.length
     ? history
-        .map(
-          (h) =>
-            `<div class="history-item"><strong>${formatDateShort(h.date)}</strong> ${CONSTANTS.positionTypes[h.position_type]?.label || h.position_type} — ${CONSTANTS.serviceTypes[h.service_type] || h.service_type}</div>`
-        )
+        .map((h) => {
+          const attBadge = h.attendance && h.attendance !== "pending"
+            ? ` <span class="badge badge-${h.attendance}" style="font-size:0.55rem">${h.attendance}</span>`
+            : "";
+          return `<div class="history-item"><strong>${formatDateShort(h.date)}</strong> ${CONSTANTS.positionTypes[h.position_type]?.label || h.position_type} — ${CONSTANTS.serviceTypes[h.service_type] || h.service_type}${attBadge}</div>`;
+        })
         .join("")
     : '<span style="color:var(--gray-400); font-size:0.78rem">No history yet</span>';
 
@@ -410,6 +461,10 @@ async function toggleMemberDetail(id, rowEl) {
       <div class="detail-section">
         <h5>Skills</h5>
         <div class="mini-skills">${skillsHtml}</div>
+      </div>
+      <div class="detail-section">
+        <h5>Attendance</h5>
+        ${attHtml}
       </div>
       <div class="detail-section">
         <h5>Notes</h5>
@@ -658,6 +713,61 @@ async function viewSchedule(serviceId) {
   detail.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+let attendanceMode = false;
+
+function toggleAttendanceMode() {
+  attendanceMode = !attendanceMode;
+  const btn = document.getElementById("btn-attendance");
+  const bar = document.getElementById("attendance-bar");
+  if (attendanceMode) {
+    btn.textContent = "Cancel";
+    btn.className = "btn btn-danger btn-sm";
+    bar.style.display = "";
+  } else {
+    btn.textContent = "Mark Attendance";
+    btn.className = "btn btn-outline btn-sm";
+    bar.style.display = "none";
+  }
+  if (currentServiceId) loadAssignments(currentServiceId);
+}
+
+function setAttendance(assignmentId, status, btnEl) {
+  const group = btnEl.parentElement;
+  group.querySelectorAll("button").forEach((b) => {
+    b.className = "";
+  });
+  btnEl.className = "att-" + status;
+  btnEl.dataset.status = status;
+}
+
+async function saveAttendance(btn) {
+  const entries = [];
+  document.querySelectorAll(".attendance-toggle").forEach((group) => {
+    const active = group.querySelector("[class^='att-']");
+    if (active) {
+      entries.push({
+        assignment_id: group.dataset.assignmentId,
+        status: active.dataset.status,
+      });
+    }
+  });
+
+  if (entries.length === 0) return toast("Mark at least one member", "warning");
+
+  setBtnLoading(btn, true);
+  try {
+    const result = await api(`/services/${currentServiceId}/attendance`, "PUT", { attendance: entries });
+    if (result) toast(`Attendance saved for ${entries.length} members`, "success");
+    attendanceMode = false;
+    document.getElementById("btn-attendance").textContent = "Mark Attendance";
+    document.getElementById("btn-attendance").className = "btn btn-outline btn-sm";
+    document.getElementById("attendance-bar").style.display = "none";
+    loadAssignments(currentServiceId);
+  } finally {
+    setBtnLoading(btn, false);
+  }
+}
+
 async function notifyCurrentService(btn) {
   if (!currentServiceId) return;
   if (!confirm("Send SMS notifications to all assigned members?")) return;
@@ -711,9 +821,16 @@ async function loadAssignments(serviceId) {
             <div>
               <strong style="font-size:0.88rem">${esc(a.member_name)}</strong>
               ${a.has_suit ? ' <span class="badge badge-suit" style="font-size:0.6rem">Suit</span>' : ""}
+              ${!attendanceMode && a.attendance !== "pending" ? ` <span class="badge badge-${a.attendance}" style="font-size:0.6rem">${a.attendance}</span>` : ""}
             </div>
           </div>
-          ${isAdmin ? `<div class="btn-group">
+          ${attendanceMode ? `
+            <div class="attendance-toggle" data-assignment-id="${a._id}">
+              <button class="${a.attendance === "present" ? "att-present" : ""}" data-status="present" onclick="setAttendance('${a._id}','present',this)">Present</button>
+              <button class="${a.attendance === "absent" ? "att-absent" : ""}" data-status="absent" onclick="setAttendance('${a._id}','absent',this)">Absent</button>
+              <button class="${a.attendance === "excused" ? "att-excused" : ""}" data-status="excused" onclick="setAttendance('${a._id}','excused',this)">Excused</button>
+            </div>
+          ` : isAdmin ? `<div class="btn-group">
             <button class="btn btn-outline btn-sm" onclick="openReplaceModal('${a._id}', '${a.position_type}', '${a.member}', '${esc(a.member_name)}')">Can't Make It</button>
             <button class="btn btn-outline btn-sm" onclick="openSwapModal('${a._id}', '${a.position_type}', '${a.member}')">Swap</button>
             <button class="btn btn-danger btn-sm" onclick="removeAssignment('${a._id}')">X</button>

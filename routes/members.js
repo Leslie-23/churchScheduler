@@ -14,6 +14,35 @@ router.post("/", requireRole("owner", "admin"), async (req, res) => {
   res.status(201).json(member);
 });
 
+router.get("/flagged/follow-up", async (req, res) => {
+  const members = await Member.find({ unit: req.unit._id, active: true }).lean();
+  const flagged = [];
+
+  for (const m of members) {
+    const recent = await Assignment.find({ member: m._id, attendance: { $ne: "pending" } })
+      .sort({ _id: -1 })
+      .limit(10)
+      .lean();
+
+    if (recent.length < 3) continue;
+    const attended = recent.filter((a) => a.attendance === "present" || a.attendance === "excused").length;
+    const rate = Math.round((attended / recent.length) * 100);
+    if (rate < 70) {
+      flagged.push({
+        _id: m._id,
+        name: m.name,
+        phone: m.phone,
+        rate,
+        recent_absent: recent.filter((a) => a.attendance === "absent").length,
+        total_checked: recent.length,
+      });
+    }
+  }
+
+  flagged.sort((a, b) => a.rate - b.rate);
+  res.json(flagged);
+});
+
 router.put("/:id", requireRole("owner", "admin"), async (req, res) => {
   const { name, gender, has_suit, phone, active, notes } = req.body;
   const member = await Member.findOneAndUpdate(
@@ -45,7 +74,7 @@ router.put("/:id/skills", requireRole("owner", "admin"), async (req, res) => {
 router.get("/:id/history", async (req, res) => {
   const assignments = await Assignment.find({ member: req.params.id })
     .populate("service")
-    .sort({ "service.date": -1 })
+    .sort({ _id: -1 })
     .lean();
 
   const history = assignments
@@ -54,11 +83,31 @@ router.get("/:id/history", async (req, res) => {
       date: a.service.date,
       service_type: a.service.service_type,
       position_type: a.position_type,
+      attendance: a.attendance || "pending",
     }))
     .sort((a, b) => (b.date > a.date ? 1 : -1))
     .slice(0, 10);
 
   res.json(history);
+});
+
+router.get("/:id/attendance", async (req, res) => {
+  const assignments = await Assignment.find({ member: req.params.id })
+    .populate("service")
+    .lean();
+
+  const unitAssignments = assignments.filter(
+    (a) => a.service && a.service.unit.toString() === req.unit._id.toString()
+  );
+
+  const total = unitAssignments.length;
+  const marked = unitAssignments.filter((a) => a.attendance && a.attendance !== "pending");
+  const present = marked.filter((a) => a.attendance === "present").length;
+  const absent = marked.filter((a) => a.attendance === "absent").length;
+  const excused = marked.filter((a) => a.attendance === "excused").length;
+  const rate = marked.length > 0 ? Math.round(((present + excused) / marked.length) * 100) : null;
+
+  res.json({ total, present, absent, excused, rate });
 });
 
 module.exports = router;

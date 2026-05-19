@@ -37,6 +37,17 @@ async function getDaysSinceLastAssignment(memberId, date, positionType) {
   return minDays;
 }
 
+async function getAttendanceRate(memberId) {
+  const recent = await Assignment.find({ member: memberId, attendance: { $ne: "pending" } })
+    .sort({ _id: -1 })
+    .limit(10)
+    .lean();
+
+  if (recent.length === 0) return 1;
+  const attended = recent.filter((a) => a.attendance === "present" || a.attendance === "excused").length;
+  return attended / recent.length;
+}
+
 async function scoreMember(member, date, positionType) {
   const skillScore = member.skill_rating * 2;
 
@@ -46,7 +57,10 @@ async function scoreMember(member, date, positionType) {
   const daysSinceThis = await getDaysSinceLastAssignment(member._id, date, positionType);
   const varietyScore = Math.min(daysSinceThis, 60) / 6;
 
-  return skillScore + rotationScore + varietyScore;
+  const attendanceRate = await getAttendanceRate(member._id);
+  const reliabilityScore = attendanceRate * 5;
+
+  return skillScore + rotationScore + varietyScore + reliabilityScore;
 }
 
 async function generateSchedule(serviceId) {

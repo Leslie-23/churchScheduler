@@ -87,6 +87,7 @@ const assignmentSchema = new mongoose.Schema({
   service: { type: mongoose.Schema.Types.ObjectId, ref: "Service", required: true },
   member: { type: mongoose.Schema.Types.ObjectId, ref: "Member", required: true },
   position_type: { type: String, required: true, enum: VALID_POSITIONS },
+  attendance: { type: String, enum: ["pending", "present", "absent", "excused"], default: "pending" },
 });
 assignmentSchema.index({ service: 1, member: 1 }, { unique: true });
 

@@ -92,6 +92,10 @@
             </div>
           </div>
         </div>
+        <div class="card" id="followup-card" data-min-role="admin" style="margin-top:1.25rem; display:none">
+          <div class="card-header"><h3>Needs Follow-Up</h3></div>
+          <div class="card-body" id="followup-list"></div>
+        </div>
       </div>
 
       <!-- MEMBERS -->
@@ -146,10 +150,17 @@
               <button class="btn btn-warning btn-sm" onclick="regenerateSchedule(this)">Re-generate</button>
               <button class="btn btn-primary btn-sm" id="btn-publish" onclick="publishSchedule()">Publish</button>
               <button class="btn btn-outline btn-sm" id="btn-notify-sms" onclick="notifyCurrentService(this)" data-min-role="admin" style="display:none">SMS Notify</button>
+              <button class="btn btn-outline btn-sm" id="btn-attendance" onclick="toggleAttendanceMode()" data-min-role="admin">Mark Attendance</button>
             </div>
           </div>
           <div class="card-body">
             <div id="schedule-warnings"></div>
+            <div id="attendance-bar" style="display:none; margin-bottom:1rem">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem">
+                <span style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--gray-600)">Attendance</span>
+                <button class="btn btn-primary btn-sm" onclick="saveAttendance(this)">Save Attendance</button>
+              </div>
+            </div>
             <div id="schedule-assignments"></div>
             <div id="schedule-empty" class="empty-state" style="display:none">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>

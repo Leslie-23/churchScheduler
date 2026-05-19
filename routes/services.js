@@ -86,8 +86,22 @@ router.get("/:id/assignments", async (req, res) => {
     gender: a.member.gender,
     has_suit: a.member.has_suit,
     position_type: a.position_type,
+    attendance: a.attendance || "pending",
   }));
   res.json(result);
+});
+
+router.put("/:id/attendance", requireRole("owner", "admin"), async (req, res) => {
+  const { attendance } = req.body;
+  if (!attendance || !Array.isArray(attendance)) return res.status(400).json({ error: "attendance array required" });
+
+  for (const entry of attendance) {
+    if (!entry.assignment_id || !entry.status) continue;
+    if (!["present", "absent", "excused"].includes(entry.status)) continue;
+    await Assignment.findByIdAndUpdate(entry.assignment_id, { attendance: entry.status });
+  }
+
+  res.json({ success: true, updated: attendance.length });
 });
 
 router.put("/assignments/:id", requireRole("owner", "admin"), async (req, res) => {
