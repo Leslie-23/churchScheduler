@@ -7,7 +7,6 @@ const { setupPassport, generateToken } = require("./auth");
 const { requireAuth, requireAuthPage, requireUnit } = require("./middleware");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(passport.initialize());
@@ -56,12 +55,19 @@ app.get("/app/*", (_req, res) => {
 });
 
 // --- Start ---
-connectDb().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Church Scheduler running at http://localhost:${PORT}`);
-    if (process.env.GROQ_API_KEY) console.log("Groq AI reporting: ENABLED");
-    else console.log("Groq AI reporting: DISABLED (set GROQ_API_KEY to enable)");
-    if (process.env.GOOGLE_CLIENT_ID) console.log("Google OAuth: ENABLED");
-    else console.log("Google OAuth: DISABLED (set GOOGLE_CLIENT_ID to enable)");
+connectDb();
+
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  connectDb().then(() => {
+    app.listen(PORT, () => {
+      console.log(`Church Scheduler running at http://localhost:${PORT}`);
+      if (process.env.GROQ_API_KEY) console.log("Groq AI reporting: ENABLED");
+      else console.log("Groq AI reporting: DISABLED (set GROQ_API_KEY to enable)");
+      if (process.env.GOOGLE_CLIENT_ID) console.log("Google OAuth: ENABLED");
+      else console.log("Google OAuth: DISABLED (set GOOGLE_CLIENT_ID to enable)");
+    });
   });
-});
+}
+
+module.exports = app;
