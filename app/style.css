@@ -218,7 +218,10 @@ body {
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 
-@media (max-width: 1024px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1024px) {
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
 
 @media (max-width: 768px) {
   .sidebar {
@@ -244,15 +247,16 @@ body {
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .grid { gap: 0.75rem; }
 
-  /* Stat cards: horizontal row */
-  #stats-row.grid-3 {
-    grid-template-columns: repeat(3, 1fr);
+  /* Stat cards: 2x2 grid on mobile */
+  #stats-row.grid-4 {
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
   }
 
-  .stat-card { padding: 0.85rem 0.65rem; text-align: center; }
+  .stat-card { padding: 0.85rem 0.65rem; min-height: 80px; }
   .stat-card .number { font-size: 2rem; }
   .stat-card .label { font-size: 0.6rem; letter-spacing: 0.08em; }
+  .stat-card .stat-sub { font-size: 0.58rem; }
 
   /* Cards */
   .card-header {
@@ -347,19 +351,23 @@ body {
 }
 
 @media (max-width: 380px) {
-  #stats-row.grid-3 { grid-template-columns: 1fr; }
+  #stats-row.grid-4 { grid-template-columns: 1fr; }
   .stat-card { text-align: left; }
   .settings-section .grid-3 { grid-template-columns: 1fr; }
 }
 
 /* ===== STAT CARDS ===== */
 .stat-card {
-  padding: 1.5rem 1.25rem;
+  padding: 1.25rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 110px;
 }
 
 .stat-card .number {
   font-family: var(--font-display);
-  font-size: 3.5rem;
+  font-size: 3rem;
   line-height: 1;
   letter-spacing: 0.02em;
 }
@@ -371,6 +379,13 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   margin-top: 0.35rem;
+}
+
+.stat-card .stat-sub {
+  font-size: 0.68rem;
+  color: var(--gray-400);
+  margin-top: 0.15rem;
+  letter-spacing: 0.04em;
 }
 
 /* ===== BUTTONS ===== */
@@ -1238,6 +1253,15 @@ tr:hover td { background: var(--gray-50); }
 }
 
 .ai-response-box h3:first-child, .ai-response-box h4:first-child { margin-top: 0; }
+
+.ai-response-box.ai-thinking {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
 
 .ai-question-label {
   font-size: 0.7rem;

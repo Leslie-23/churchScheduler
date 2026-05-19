@@ -229,31 +229,50 @@ function setupNav() {
 // --- Dashboard ---
 
 async function loadDashboard() {
+  const upEl = document.getElementById("upcoming-services");
+  upEl.innerHTML = '<div class="loading-spinner">Loading upcoming...</div>';
+  document.getElementById("stats-row").innerHTML = `
+    <div class="card stat-card"><div class="loading-spinner" style="padding:1rem"></div></div>
+    <div class="card stat-card"><div class="loading-spinner" style="padding:1rem"></div></div>
+    <div class="card stat-card"><div class="loading-spinner" style="padding:1rem"></div></div>
+    <div class="card stat-card"><div class="loading-spinner" style="padding:1rem"></div></div>
+  `;
+
   const [members, services] = await Promise.all([
     api("/members"),
     api("/services?upcoming=true"),
   ]);
   if (!members || !services) return;
 
+  const total = members.length;
   const active = members.filter((m) => m.active);
+  const males = active.filter((m) => m.gender === "M");
+  const females = active.filter((m) => m.gender === "F");
   const withSuit = active.filter((m) => m.has_suit);
 
   document.getElementById("stats-row").innerHTML = `
     <div class="card stat-card">
+      <div class="number">${total}</div>
+      <div class="label">Total Members</div>
+      <div class="stat-sub">${males.length}M &middot; ${females.length}F</div>
+    </div>
+    <div class="card stat-card">
       <div class="number">${active.length}</div>
-      <div class="label">Active Members</div>
+      <div class="label">Active</div>
+      <div class="stat-sub">${total - active.length} inactive</div>
     </div>
     <div class="card stat-card">
       <div class="number">${withSuit.length}</div>
       <div class="label">With Suits</div>
+      <div class="stat-sub">${active.length - withSuit.length} without</div>
     </div>
     <div class="card stat-card">
       <div class="number">${services.length}</div>
       <div class="label">Upcoming</div>
+      <div class="stat-sub">services scheduled</div>
     </div>
   `;
 
-  const upEl = document.getElementById("upcoming-services");
   if (services.length === 0) {
     upEl.innerHTML = '<div class="empty-state"><p>No upcoming services.</p></div>';
   } else {
@@ -954,8 +973,9 @@ async function quickGenerate() {
 
 async function loadSettings() {
   const editor = document.getElementById("position-counts-editor");
-  let html = "";
+  editor.innerHTML = '<div class="loading-spinner">Loading settings...</div>';
 
+  let html = "";
   for (const [sType, sLabel] of Object.entries(CONSTANTS.serviceTypes)) {
     const counts = await api(`/settings/position-counts/${sType}`);
     if (!counts) continue;
@@ -1008,21 +1028,25 @@ async function checkAIStatus() {
 
 async function askAI(question) {
   const responseDiv = document.getElementById("ai-response");
-  responseDiv.innerHTML = `<div class="ai-response-box" style="opacity:0.6"><p>Thinking...</p></div>`;
+  responseDiv.innerHTML = `
+    <div class="ai-response-box ai-thinking">
+      <div class="loader" style="justify-content:center;margin-bottom:0.75rem"><span></span><span></span><span></span></div>
+      <p style="text-align:center; color:var(--gray-600); text-transform:uppercase; letter-spacing:0.1em; font-size:0.78rem; font-weight:600">Analyzing your team data...</p>
+    </div>`;
 
   document.querySelectorAll(".ai-quick-actions button, #ai-question").forEach(el => el.disabled = true);
 
   try {
     const data = await api("/ai/report", "POST", { question });
     if (!data || data.error) {
-      responseDiv.innerHTML = `<div class="ai-response-box" style="border-color:var(--red)"><p>${esc(data?.error || "Request failed")}</p></div>`;
+      responseDiv.innerHTML = `<div class="ai-response-box" style="border-color:var(--red); background:var(--red-bg)"><p style="color:var(--red)">${esc(data?.error || "Request failed")}</p></div>`;
     } else {
       responseDiv.innerHTML = `<div class="ai-response-box">${renderMarkdown(data.answer)}</div>`;
       aiHistory.unshift({ question, answer: data.answer, time: new Date() });
       renderAIHistory();
     }
   } catch (e) {
-    responseDiv.innerHTML = `<div class="ai-response-box" style="border-color:var(--red)"><p>Request failed. Check your connection.</p></div>`;
+    responseDiv.innerHTML = `<div class="ai-response-box" style="border-color:var(--red); background:var(--red-bg)"><p style="color:var(--red)">Request failed. Check your connection.</p></div>`;
   } finally {
     document.querySelectorAll(".ai-quick-actions button, #ai-question").forEach(el => el.disabled = false);
   }
