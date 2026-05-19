@@ -43,7 +43,7 @@ a { color: var(--black); }
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 2rem;
-  border-bottom: 1.5px solid var(--accent);
+  border-bottom: 1.5px solid var(--black);
 }
 .landing-nav .logo {
   font-family: 'Bebas Neue', sans-serif;
@@ -189,7 +189,7 @@ a { color: var(--black); }
   font-family: 'Bebas Neue', sans-serif;
   font-size: 2rem;
   margin-bottom: 0.5rem;
-  color: var(--accent);
+  color: var(--gray-400);
 }
 
 /* --- HOW IT WORKS --- */
