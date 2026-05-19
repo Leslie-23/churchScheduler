@@ -376,8 +376,23 @@ body {
   padding: 1.25rem 1.25rem;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
+  min-height: 130px;
+}
+
+.stat-card .stat-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  min-height: 110px;
+  margin-bottom: 0.7rem;
+  color: var(--accent);
+}
+
+.stat-card .stat-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .stat-card .number {
