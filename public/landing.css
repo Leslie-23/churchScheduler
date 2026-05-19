@@ -181,6 +181,22 @@ a { color: var(--black); }
   font-weight: 600;
 }
 
+.typer {
+  border-bottom: 3px solid var(--accent-mid);
+  padding-bottom: 0.05em;
+}
+
+.cursor {
+  color: var(--accent-mid);
+  animation: blink 0.7s step-end infinite;
+  font-weight: 400;
+  margin-left: 1px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
 /* --- PROBLEM --- */
 .problem-section {
   padding: 5rem 2rem;
