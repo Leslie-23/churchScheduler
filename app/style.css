@@ -11,6 +11,9 @@
   --red: #b91c1c;
   --green: #15803d;
   --yellow: #a16207;
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --accent-soft: #eff6ff;
   --red-bg: #fef2f2;
   --green-bg: #f0fdf4;
   --yellow-bg: #fefce8;
@@ -138,12 +141,12 @@ body {
 
 .nav-link:hover {
   color: var(--white);
-  background: #111;
+  background: rgba(37, 99, 235, 0.18);
 }
 
 .nav-link.active {
   color: var(--white);
-  border-left-color: var(--white);
+  border-left-color: var(--accent);
   background: #111;
 }
 
@@ -201,6 +204,7 @@ body {
 .card-header {
   padding: 1rem 1.25rem;
   border-bottom: var(--border);
+  background: var(--accent-soft);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -213,6 +217,7 @@ body {
   font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  color: var(--accent-dark);
 }
 
 .card-body { padding: 1.25rem; }
@@ -419,25 +424,26 @@ body {
 .btn svg { width: 15px; height: 15px; }
 
 .btn-primary {
-  background: var(--black);
+  background: var(--accent);
   color: var(--white);
-  border-color: var(--black);
+  border-color: var(--accent);
 }
 
-.btn-primary:hover { background: #222; }
+.btn-primary:hover { background: var(--accent-dark); }
 
 .btn-success {
-  background: var(--black);
+  background: var(--accent);
   color: var(--white);
-  border-color: var(--black);
+  border-color: var(--accent);
 }
 
 .btn-warning {
-  background: var(--white);
-  color: var(--black);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  border-color: var(--accent-soft);
 }
 
-.btn-warning:hover { background: var(--gray-100); }
+.btn-warning:hover { background: #dbeafe; }
 
 .btn-danger {
   background: var(--white);

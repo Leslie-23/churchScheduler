@@ -9,6 +9,9 @@
   --gray-400: #a0a0a0;
   --gray-600: #555;
   --red: #d00;
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --accent-soft: #eff6ff;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -40,7 +43,7 @@ a { color: var(--black); }
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 2rem;
-  border-bottom: 1.5px solid var(--black);
+  border-bottom: 1.5px solid var(--accent);
 }
 .landing-nav .logo {
   font-family: 'Bebas Neue', sans-serif;
@@ -103,8 +106,8 @@ a { color: var(--black); }
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-.btn-primary { background: var(--black); color: var(--white); }
-.btn-primary:hover { background: var(--gray-600); }
+.btn-primary { background: var(--accent); color: var(--white); border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent-dark); }
 .btn-outline { background: var(--white); color: var(--black); }
 .btn-outline:hover { background: var(--black); color: var(--white); }
 
@@ -147,6 +150,7 @@ a { color: var(--black); }
   font-size: 2.5rem;
   line-height: 1;
   min-width: 70px;
+  color: var(--accent);
 }
 .stat-label {
   font-size: 0.85rem;
@@ -185,7 +189,7 @@ a { color: var(--black); }
   font-family: 'Bebas Neue', sans-serif;
   font-size: 2rem;
   margin-bottom: 0.5rem;
-  color: var(--gray-400);
+  color: var(--accent);
 }
 
 /* --- HOW IT WORKS --- */
@@ -473,4 +477,11 @@ a { color: var(--black); }
   .choice-grid { grid-template-columns: 1fr; }
   .who-grid { grid-template-columns: 1fr 1fr; }
   .features h2, .how-it-works h2, .problem-section h2, .who-section h2, .cta-section h2 { font-size: 2rem; }
+}
+
+
+.small-letter-s {
+
+  font-size: 1.1rem;
+  /* vertical-align: super; */
 }
