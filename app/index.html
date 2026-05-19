@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Church Scheduler</title>
+  <link rel="stylesheet" href="/app/style.css">
+</head>
+<body>
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <h1>Church<br>Scheduler</h1>
+      <p>Crowd Control Unit</p>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-link active" data-page="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-link" data-page="members">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Members
+      </a>
+      <a class="nav-link" data-page="schedule">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Schedule
+      </a>
+      <a class="nav-link" data-page="settings" data-min-role="admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </a>
+      <a class="nav-link" data-page="reports" data-min-role="admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        AI Reports
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="sidebar-user" style="display:none">
+        <div class="sidebar-user-info" onclick="showPage('profile')">
+          <span id="sidebar-user-name"></span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="logout()" style="width:100%;margin-top:0.3rem;font-size:0.7rem">Logout</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <div class="main">
+
+    <div class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <h2 id="page-title">Dashboard</h2>
+      <div class="topbar-actions" id="topbar-actions">
+        <select class="form-select unit-switcher" id="unit-switcher" onchange="switchUnit(this.value)"></select>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page active">
+        <div class="grid grid-3" id="stats-row" style="margin-bottom:1.25rem"></div>
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-header"><h3>Upcoming</h3></div>
+            <div class="card-body" id="upcoming-services"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Quick Schedule</h3></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Date</label>
+                <input type="date" class="form-input" id="quick-date">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Service Type</label>
+                <select class="form-select" id="quick-type"></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Name (optional)</label>
+                <input type="text" class="form-input" id="quick-name" placeholder="e.g. Easter Sunday">
+              </div>
+              <button class="btn btn-primary" onclick="quickGenerate()" style="width:100%">Generate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEMBERS -->
+      <div id="page-members" class="page">
+        <div class="card">
+          <div class="card-header">
+            <h3>Team Members</h3>
+            <button class="btn btn-primary" onclick="openMemberModal()" data-min-role="admin">+ Add</button>
+          </div>
+          <div class="card-body compact">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Name</th><th>Gender</th><th>Suit</th><th>Phone</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+                <tbody id="members-table"></tbody>
+              </table>
+            </div>
+            <div id="members-empty" class="empty-state" style="display:none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <p>No members yet.</p>
+              <button class="btn btn-primary" onclick="openMemberModal()">+ Add Member</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div id="page-schedule" class="page">
+        <div class="card">
+          <div class="card-header">
+            <h3>Services</h3>
+            <button class="btn btn-primary" onclick="openServiceModal()" data-min-role="admin">+ New</button>
+          </div>
+          <div class="card-body compact">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+                <tbody id="services-table"></tbody>
+              </table>
+            </div>
+            <div id="services-empty" class="empty-state" style="display:none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <p>No services yet.</p>
+              <button class="btn btn-primary" onclick="openServiceModal()">+ New Service</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="schedule-detail" style="display:none">
+          <div class="card-header">
+            <h3 id="schedule-detail-title">Schedule</h3>
+            <div class="btn-group">
+              <button class="btn btn-warning btn-sm" onclick="regenerateSchedule()">Re-generate</button>
+              <button class="btn btn-primary btn-sm" id="btn-publish" onclick="publishSchedule()">Publish</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="schedule-warnings"></div>
+            <div id="schedule-assignments"></div>
+            <div id="schedule-empty" class="empty-state" style="display:none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <p>No assignments. Generate a schedule.</p>
+              <button class="btn btn-primary" onclick="generateCurrentSchedule()">Generate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="page-settings" class="page">
+        <div class="card">
+          <div class="card-header">
+            <h3>Position Counts</h3>
+            <button class="btn btn-primary" onclick="savePositionCounts()">Save</button>
+          </div>
+          <div class="card-body" id="position-counts-editor"></div>
+        </div>
+      </div>
+
+      <!-- AI REPORTS -->
+      <div id="page-reports" class="page">
+        <div class="card">
+          <div class="card-header"><h3>AI Reports</h3></div>
+          <div class="card-body">
+            <div id="ai-disabled" style="display:none">
+              <div class="alert alert-warning">Groq AI is not configured. Start the server with <strong>GROQ_API_KEY=your_key</strong> to enable reports.</div>
+            </div>
+            <div id="ai-enabled" style="display:none">
+              <div class="ai-quick-actions" style="margin-bottom:1rem">
+                <label class="form-label">Quick Reports</label>
+                <div class="btn-group" style="flex-wrap:wrap">
+                  <button class="btn btn-outline btn-sm" onclick="askAI('Who has been serving the most and who has been serving the least? Show counts.')">Workload Balance</button>
+                  <button class="btn btn-outline btn-sm" onclick="askAI('Which members have not served in the last 2 weeks and should be scheduled next?')">Due for Rotation</button>
+                  <button class="btn btn-outline btn-sm" onclick="askAI('Give a summary of our team: total members, suit count, gender split, and any gaps or concerns for scheduling.')">Team Summary</button>
+                  <button class="btn btn-outline btn-sm" onclick="askAI('Are there any positions where we are short on skilled members? Which positions need more trained people?')">Skill Gaps</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Ask a Question</label>
+                <div style="display:flex; gap:0.5rem">
+                  <input type="text" class="form-input" id="ai-question" placeholder="e.g. Who should serve at the doors this Sunday?" onkeydown="if(event.key==='Enter')askAIFromInput()">
+                  <button class="btn btn-primary" onclick="askAIFromInput()" style="flex-shrink:0">Ask</button>
+                </div>
+              </div>
+              <div id="ai-response"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="ai-history-card" style="display:none">
+          <div class="card-header"><h3>History</h3></div>
+          <div class="card-body" id="ai-history"></div>
+        </div>
+      </div>
+
+      <!-- PROFILE -->
+      <div id="page-profile" class="page">
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-header"><h3>Profile</h3></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-input" id="p-name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="p-email" disabled>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone</label>
+                <input type="text" class="form-input" id="p-phone" placeholder="080xxxxxxxx">
+              </div>
+              <button class="btn btn-primary" onclick="saveProfile()">Update Profile</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>My Units</h3></div>
+            <div class="card-body">
+              <div id="my-units-list"></div>
+              <hr class="divider">
+              <label class="form-label">Join Another Unit</label>
+              <div style="display:flex; gap:0.5rem">
+                <input type="text" class="form-input" id="join-code" placeholder="Invite code">
+                <button class="btn btn-primary" onclick="joinUnit()">Join</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="password-card">
+          <div class="card-header"><h3>Change Password</h3></div>
+          <div class="card-body">
+            <div class="grid grid-2">
+              <div class="form-group">
+                <label class="form-label">Current Password</label>
+                <input type="password" class="form-input" id="p-current-pw">
+              </div>
+              <div class="form-group">
+                <label class="form-label">New Password</label>
+                <input type="password" class="form-input" id="p-new-pw">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="changePassword()">Change Password</button>
+          </div>
+        </div>
+        <div class="card" id="unit-admin-card" style="display:none" data-min-role="owner">
+          <div class="card-header"><h3>Unit Management</h3></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Invite Code</label>
+              <div style="display:flex; gap:0.5rem; align-items:center">
+                <code id="unit-invite-code" style="font-size:1.1rem; letter-spacing:0.15em; font-weight:700"></code>
+                <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()">Copy</button>
+                <button class="btn btn-ghost btn-sm" onclick="regenerateInvite()">Regenerate</button>
+              </div>
+            </div>
+            <hr class="divider">
+            <label class="form-label">Unit Members</label>
+            <div id="unit-members-list"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MEMBER MODAL -->
+  <div class="modal-overlay" id="member-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="member-modal-title">Add Member</h2>
+        <button class="modal-close" onclick="closeMemberModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="member-edit-id">
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-input" id="m-name" placeholder="John Adeyemi">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="text" class="form-input" id="m-phone" placeholder="080xxxxxxxx">
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select class="form-select" id="m-gender">
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Has Suit?</label>
+            <div class="toggle-wrap" style="margin-top:0.3rem">
+              <label class="toggle"><input type="checkbox" id="m-suit"><span class="slider"></span></label>
+              <span id="m-suit-label" style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em">No</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="form-textarea" id="m-notes" placeholder="Any relevant notes..."></textarea>
+        </div>
+        <hr class="divider">
+        <label class="form-label" style="margin-bottom:0.6rem">Skill Ratings</label>
+        <div id="skill-ratings"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeMemberModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveMember()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVICE MODAL -->
+  <div class="modal-overlay" id="service-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>New Service</h2>
+        <button class="modal-close" onclick="closeServiceModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" class="form-input" id="s-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Service Type</label>
+          <select class="form-select" id="s-type"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Name (optional)</label>
+          <input type="text" class="form-input" id="s-name" placeholder="Thanksgiving Service">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeServiceModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveService()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SWAP MODAL -->
+  <div class="modal-overlay" id="swap-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Swap Member</h2>
+        <button class="modal-close" onclick="closeSwapModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="swap-assignment-id">
+        <div class="form-group">
+          <label class="form-label">Position</label>
+          <select class="form-select" id="swap-position"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Assign To</label>
+          <div class="search-select" id="swap-member-search">
+            <input type="text" class="form-input" id="swap-member-input" placeholder="Search members..." autocomplete="off" oninput="filterSwapMembers()" onfocus="showSwapDropdown()">
+            <input type="hidden" id="swap-member">
+            <div class="search-dropdown" id="swap-member-dropdown"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeSwapModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSwap()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPLACEMENT MODAL -->
+  <div class="modal-overlay" id="replace-modal">
+    <div class="modal" style="max-width:620px">
+      <div class="modal-header">
+        <h2>Find Replacement</h2>
+        <button class="modal-close" onclick="closeReplaceModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="replace-removed"></div>
+        <label class="form-label" style="margin-bottom:0.6rem">Suggested Replacements</label>
+        <div id="replace-suggestions"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeReplaceModal()">Cancel</button>
+        <button class="btn btn-primary" id="btn-confirm-replace" onclick="confirmReplace()" disabled>Confirm Replacement</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app/app.js"></script>
+</body>
+</html>

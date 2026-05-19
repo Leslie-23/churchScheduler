@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get Started — Church Scheduler</title>
+  <link rel="stylesheet" href="/landing.css">
+</head>
+<body>
+  <div class="onboarding-page">
+    <div class="onboarding-card">
+      <h1>Get Started</h1>
+      <p class="subtitle">Create a new unit or join an existing one.</p>
+
+      <div class="auth-error" id="error-msg"></div>
+
+      <div class="choice-grid">
+        <div class="choice-card" id="choice-create" onclick="selectChoice('create')">
+          <h3>Create Unit</h3>
+          <p>Start a new crowd control unit</p>
+        </div>
+        <div class="choice-card" id="choice-join" onclick="selectChoice('join')">
+          <h3>Join Unit</h3>
+          <p>Enter an invite code from your leader</p>
+        </div>
+      </div>
+
+      <div class="onboard-form" id="form-create">
+        <div class="form-group">
+          <label class="form-label">Unit Name</label>
+          <input type="text" class="form-input" id="unit-name" placeholder="e.g. Main Church CCU">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description (optional)</label>
+          <input type="text" class="form-input" id="unit-desc" placeholder="Crowd control unit for Sunday services">
+        </div>
+        <button class="auth-btn" onclick="createUnit()">Create Unit</button>
+      </div>
+
+      <div class="onboard-form" id="form-join">
+        <div class="form-group">
+          <label class="form-label">Invite Code</label>
+          <input type="text" class="form-input" id="invite-code" placeholder="e.g. a1b2c3d4" style="text-transform:lowercase; letter-spacing:0.15em; font-weight:700">
+        </div>
+        <button class="auth-btn" onclick="joinUnit()">Join Unit</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/landing.js"></script>
+  <script>
+    const token = localStorage.getItem("auth_token");
+    if (!token) window.location.href = "/login.html";
+
+    function selectChoice(choice) {
+      document.querySelectorAll(".choice-card").forEach((c) => c.classList.remove("active"));
+      document.querySelectorAll(".onboard-form").forEach((f) => f.classList.remove("active"));
+      document.getElementById("choice-" + choice).classList.add("active");
+      document.getElementById("form-" + choice).classList.add("active");
+    }
+
+    async function createUnit() {
+      clearError();
+      const name = document.getElementById("unit-name").value.trim();
+      if (!name) { showError("Unit name is required"); return; }
+
+      try {
+        const res = await fetch("/api/units", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token,
+          },
+          body: JSON.stringify({
+            name,
+            description: document.getElementById("unit-desc").value.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || "Failed to create unit"); return; }
+        localStorage.setItem("active_unit_id", data._id);
+        window.location.href = "/app";
+      } catch {
+        showError("Connection failed. Try again.");
+      }
+    }
+
+    async function joinUnit() {
+      clearError();
+      const code = document.getElementById("invite-code").value.trim();
+      if (!code) { showError("Enter an invite code"); return; }
+
+      try {
+        const res = await fetch("/api/units/join", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token,
+          },
+          body: JSON.stringify({ invite_code: code }),
+        });
+        const data = await res.json();
+        if (!res.ok) { showError(data.error || "Failed to join unit"); return; }
+        localStorage.setItem("active_unit_id", data._id);
+        window.location.href = "/app";
+      } catch {
+        showError("Connection failed. Try again.");
+      }
+    }
+  </script>
+</body>
+</html>

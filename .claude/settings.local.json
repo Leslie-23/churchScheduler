@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python --version)",
+      "PowerShell(npm *)",
+      "PowerShell(New-Item *)",
+      "PowerShell(node -e \"const http = require\\('http'\\); http.get\\('http://localhost:3000/api/constants', res => { let d=''; res.on\\('data', c => d+=c\\); res.on\\('end', \\(\\) => console.log\\(d.substring\\(0,200\\)\\)\\); }\\).on\\('error', e => console.log\\('Error:', e.message\\)\\)\")",
+      "Bash(node server.js)",
+      "WebFetch(domain:localhost)",
+      "Bash(npm install *)",
+      "PowerShell($token = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YTBiZjUwNGRkODYwZGE3YjE3N2I3OWEiLCJpYXQiOjE3NzkxNjg1NjksImV4cCI6MTc3OTc3MzM2OX0.ttbAz4u33tqofI_KsSBCiI3pBr1R0k4ehkYyqdpZubE\"; $r = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/me\" -Method GET -Headers @{\"Authorization\"=\"Bearer $token\"} -UseBasicParsing; $r.Content)"
+    ]
+  }
+}

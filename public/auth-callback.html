@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authenticating... — Church Scheduler</title>
+  <link rel="stylesheet" href="/landing.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card" style="text-align:center">
+      <h1>Authenticating...</h1>
+      <p class="subtitle">Redirecting you now.</p>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const redirect = params.get("redirect") || "/app";
+
+    if (token) {
+      localStorage.setItem("auth_token", token);
+      window.location.href = redirect;
+    } else {
+      window.location.href = "/login.html";
+    }
+  </script>
+</body>
+</html>
