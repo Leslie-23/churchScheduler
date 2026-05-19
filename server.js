@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const passport = require("passport");
-const { connectDb, POSITION_TYPES, SERVICE_TYPES } = require("./database");
+const { connectDb, DEFAULT_POSITION_TYPES, DEFAULT_SERVICE_TYPES, Unit, getUnitPositionTypes, getUnitServiceTypes } = require("./database");
 const { setupPassport, generateToken } = require("./auth");
 const { requireAuth, requireAuthPage, requireUnit } = require("./middleware");
 
@@ -32,9 +32,21 @@ if (process.env.GOOGLE_CLIENT_ID) {
   );
 }
 
-// --- Constants (public, no unit needed) ---
-app.get("/api/constants", (_req, res) => {
-  res.json({ positionTypes: POSITION_TYPES, serviceTypes: SERVICE_TYPES });
+app.get("/api/constants", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const unitId = req.headers["x-unit-id"];
+  if (authHeader && unitId) {
+    try {
+      const unit = await Unit.findById(unitId).lean();
+      if (unit) {
+        return res.json({
+          positionTypes: getUnitPositionTypes(unit),
+          serviceTypes: getUnitServiceTypes(unit),
+        });
+      }
+    } catch {}
+  }
+  res.json({ positionTypes: DEFAULT_POSITION_TYPES, serviceTypes: DEFAULT_SERVICE_TYPES });
 });
 
 // --- Protected API routes ---
@@ -62,7 +74,7 @@ if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
   connectDb().then(() => {
     app.listen(PORT, () => {
-      console.log(`Church Scheduler running at http://localhost:${PORT}`);
+      console.log(`Stewardly running at http://localhost:${PORT}`);
       if (process.env.GROQ_API_KEY) console.log("Groq AI reporting: ENABLED");
       else console.log("Groq AI reporting: DISABLED (set GROQ_API_KEY to enable)");
       if (process.env.GOOGLE_CLIENT_ID) console.log("Google OAuth: ENABLED");

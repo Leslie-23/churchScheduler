@@ -8,9 +8,9 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", requireRole("owner", "admin"), async (req, res) => {
-  const { name, gender, has_suit, phone, notes } = req.body;
+  const { name, gender, has_suit, phone, notes, service_availability } = req.body;
   if (!name || !gender) return res.status(400).json({ error: "Name and gender are required" });
-  const member = await Member.create({ unit: req.unit._id, name, gender, has_suit: !!has_suit, phone, notes });
+  const member = await Member.create({ unit: req.unit._id, name, gender, has_suit: !!has_suit, phone, notes, service_availability: service_availability || "both" });
   res.status(201).json(member);
 });
 
@@ -44,10 +44,10 @@ router.get("/flagged/follow-up", async (req, res) => {
 });
 
 router.put("/:id", requireRole("owner", "admin"), async (req, res) => {
-  const { name, gender, has_suit, phone, active, notes } = req.body;
+  const { name, gender, has_suit, phone, active, notes, service_availability } = req.body;
   const member = await Member.findOneAndUpdate(
     { _id: req.params.id, unit: req.unit._id },
-    { name, gender, has_suit: !!has_suit, phone, active: !!active, notes },
+    { name, gender, has_suit: !!has_suit, phone, active: !!active, notes, service_availability: service_availability || "both" },
     { new: true }
   );
   res.json(member);

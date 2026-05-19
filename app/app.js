@@ -15,6 +15,7 @@ const pageTitles = {
   sms: "SMS Notifications",
   reports: "AI Reports",
   profile: "Profile",
+  help: "Help & Guide",
 };
 
 let aiHistory = [];
@@ -175,12 +176,14 @@ function populateUnitSwitcher() {
   sel.style.display = currentMemberships.length > 1 ? "" : "none";
 }
 
-function switchUnit(unitId) {
+async function switchUnit(unitId) {
   activeUnitId = unitId;
   localStorage.setItem("active_unit_id", unitId);
   const membership = currentMemberships.find((m) => m.unit._id === unitId);
   activeRole = membership ? membership.role : "member";
   applyRoleRestrictions(activeRole);
+  CONSTANTS = await api("/constants");
+  populateServiceTypeSelects();
   loadDashboard();
   loadMembers();
   loadServices();
@@ -372,6 +375,7 @@ async function loadMembers() {
 
   const isAdmin = activeRole === "owner" || activeRole === "admin";
 
+  const availLabels = { both: "Both", first_only: "1st", second_only: "2nd" };
   tbody.innerHTML = membersCache
     .map(
       (m) => `
@@ -386,6 +390,7 @@ async function loadMembers() {
       <td data-label="Gender"><span class="badge badge-${m.gender === "M" ? "male" : "female"}">${m.gender === "M" ? "M" : "F"}</span></td>
       <td data-label="Suit">${m.has_suit ? '<span class="badge badge-suit">Suit</span>' : '<span style="color:var(--gray-400)">&mdash;</span>'}</td>
       <td data-label="Phone" style="color:var(--gray-600); font-size:0.82rem">${esc(m.phone || "—")}</td>
+      <td data-label="Availability"><span class="badge">${availLabels[m.service_availability] || "Both"}</span></td>
       <td data-label="Status"><span class="badge badge-${m.active ? "active" : "inactive"}">${m.active ? "Active" : "Off"}</span></td>
       <td data-label="" onclick="event.stopPropagation()">
         ${isAdmin ? `<div class="btn-group">
@@ -395,7 +400,7 @@ async function loadMembers() {
       </td>
     </tr>
     <tr class="expand-detail" id="detail-${m._id}">
-      <td colspan="6">
+      <td colspan="7">
         <div class="expand-content" id="detail-content-${m._id}">
           <div class="loading-spinner">Loading...</div>
         </div>
@@ -486,6 +491,7 @@ function openMemberModal() {
   document.getElementById("m-gender").value = "M";
   document.getElementById("m-suit").checked = false;
   document.getElementById("m-suit-label").textContent = "No";
+  document.getElementById("m-availability").value = "both";
   document.getElementById("m-notes").value = "";
   renderSkillInputs({});
   document.getElementById("member-modal").classList.add("active");
@@ -507,6 +513,7 @@ async function editMember(id) {
   document.getElementById("m-gender").value = member.gender;
   document.getElementById("m-suit").checked = !!member.has_suit;
   document.getElementById("m-suit-label").textContent = member.has_suit ? "Yes" : "No";
+  document.getElementById("m-availability").value = member.service_availability || "both";
   document.getElementById("m-notes").value = member.notes || "";
 
   const skillMap = {};
@@ -556,6 +563,7 @@ async function saveMember() {
     has_suit: document.getElementById("m-suit").checked,
     phone: document.getElementById("m-phone").value.trim(),
     notes: document.getElementById("m-notes").value.trim(),
+    service_availability: document.getElementById("m-availability").value,
     active: true,
   };
 
@@ -631,6 +639,7 @@ async function loadServices() {
     <tr class="expandable-row" onclick="viewSchedule('${s._id}')" style="cursor:pointer">
       <td data-label="Date"><strong>${formatDate(s.date)}</strong></td>
       <td data-label="Type">${CONSTANTS.serviceTypes[s.service_type] || s.service_type}</td>
+      <td data-label="Slot"><span class="badge">${s.service_slot === 2 ? "2nd" : "1st"}</span></td>
       <td data-label="Name" style="color:var(--gray-600)">${esc(s.name || "—")}</td>
       <td data-label="Status"><span class="badge badge-${s.status}">${s.status}</span></td>
       <td data-label="" onclick="event.stopPropagation()">
@@ -652,6 +661,7 @@ async function saveService() {
   const data = {
     date: document.getElementById("s-date").value,
     service_type: document.getElementById("s-type").value,
+    service_slot: parseInt(document.getElementById("s-slot").value) || 1,
     name: document.getElementById("s-name").value.trim(),
   };
   if (!data.date || !data.service_type) return toast("Date and type are required", "warning");
@@ -691,8 +701,9 @@ async function viewSchedule(serviceId) {
 
   const detail = document.getElementById("schedule-detail");
   detail.style.display = "block";
+  const slotLabel = service.service_slot === 2 ? " (2nd Service)" : " (1st Service)";
   document.getElementById("schedule-detail-title").textContent =
-    `${formatDate(service.date)} — ${CONSTANTS.serviceTypes[service.service_type] || service.service_type}${service.name ? " — " + service.name : ""}`;
+    `${formatDate(service.date)} — ${CONSTANTS.serviceTypes[service.service_type] || service.service_type}${slotLabel}${service.name ? " — " + service.name : ""}`;
 
   const publishBtn = document.getElementById("btn-publish");
   if (service.status === "published") {
@@ -802,8 +813,9 @@ async function loadAssignments(serviceId) {
     grouped[a.position_type].push(a);
   }
 
-  const posOrder = ["ESCORT", "STANDING", "DOOR", "USHER", "OVERFLOW", "CHAIRS"];
-  container.innerHTML = posOrder
+  const posOrder = Object.keys(CONSTANTS.positionTypes || {});
+  const allKeys = [...new Set([...posOrder, ...Object.keys(grouped)])];
+  container.innerHTML = allKeys
     .filter((p) => grouped[p])
     .map(
       (p) => `
@@ -1092,6 +1104,7 @@ async function removeAssignment(id) {
 async function quickGenerate() {
   const date = document.getElementById("quick-date").value;
   const type = document.getElementById("quick-type").value;
+  const slot = parseInt(document.getElementById("quick-slot").value) || 1;
   const name = document.getElementById("quick-name").value.trim();
   if (!date || !type) return toast("Date and type are required", "warning");
   if (isBusy("quickgen")) return toast("Already generating...", "warning");
@@ -1099,7 +1112,7 @@ async function quickGenerate() {
 
   showLoading("Creating service & generating schedule...");
   try {
-    const service = await api("/services", "POST", { date, service_type: type, name });
+    const service = await api("/services", "POST", { date, service_type: type, service_slot: slot, name });
     if (!service) return;
     await api(`/services/${service._id}/generate`, "POST");
 
@@ -1116,29 +1129,77 @@ async function quickGenerate() {
 // --- Settings ---
 
 async function loadSettings() {
+  loadServiceTypesEditor();
+  loadPositionTypesEditor();
+  loadPositionCountsEditor();
+}
+
+function loadServiceTypesEditor() {
+  const editor = document.getElementById("service-types-editor");
+  const types = CONSTANTS.serviceTypes || {};
+  if (Object.keys(types).length === 0) {
+    editor.innerHTML = '<div class="empty-state"><p>No service types configured.</p></div>';
+    return;
+  }
+  editor.innerHTML = Object.entries(types).map(([key, label]) => `
+    <div class="settings-type-item" data-key="${esc(key)}">
+      <div style="flex:1">
+        <strong>${esc(label)}</strong>
+        <span style="color:var(--gray-400); font-size:0.75rem; margin-left:0.5rem">${esc(key)}</span>
+      </div>
+      ${activeRole === "owner" ? `<button class="btn btn-danger btn-sm" onclick="removeServiceType('${esc(key)}')">Remove</button>` : ""}
+    </div>
+  `).join("");
+}
+
+function loadPositionTypesEditor() {
+  const editor = document.getElementById("position-types-editor");
+  const types = CONSTANTS.positionTypes || {};
+  if (Object.keys(types).length === 0) {
+    editor.innerHTML = '<div class="empty-state"><p>No position types configured.</p></div>';
+    return;
+  }
+  editor.innerHTML = Object.entries(types).map(([key, pos]) => {
+    const reqs = [];
+    if (pos.requiresSuit) reqs.push("Suit");
+    if (pos.requiresMale) reqs.push("Male");
+    return `
+    <div class="settings-type-item" data-key="${esc(key)}">
+      <div style="flex:1">
+        <strong>${esc(pos.label)}</strong>
+        <span style="color:var(--gray-600); font-size:0.78rem; margin-left:0.3rem">${esc(pos.description || "")}</span>
+        ${reqs.length ? `<span class="badge" style="font-size:0.6rem; margin-left:0.3rem">${reqs.join(" + ")}</span>` : ""}
+      </div>
+      ${activeRole === "owner" ? `<button class="btn btn-danger btn-sm" onclick="removePositionType('${esc(key)}')">Remove</button>` : ""}
+    </div>
+  `;
+  }).join("");
+}
+
+async function loadPositionCountsEditor() {
   const editor = document.getElementById("position-counts-editor");
-  editor.innerHTML = '<div class="loading-spinner">Loading settings...</div>';
+  editor.innerHTML = '<div class="loading-spinner">Loading...</div>';
 
   let html = "";
-  for (const [sType, sLabel] of Object.entries(CONSTANTS.serviceTypes)) {
+  for (const [sType, sLabel] of Object.entries(CONSTANTS.serviceTypes || {})) {
     const counts = await api(`/settings/position-counts/${sType}`);
     if (!counts) continue;
-    html += `<div class="settings-section"><h3>${sLabel}</h3><div class="grid grid-3">`;
-    for (const [pType, pos] of Object.entries(CONSTANTS.positionTypes)) {
+    html += `<div class="settings-section"><h4>${esc(sLabel)}</h4><div class="grid grid-3">`;
+    for (const [pType, pos] of Object.entries(CONSTANTS.positionTypes || {})) {
       const existing = counts.find((c) => c.position_type === pType);
       html += `
         <div class="form-group">
-          <label class="form-label">${pos.label}</label>
-          <input type="number" min="0" max="20" value="${existing ? existing.count : 0}" class="form-input pc-input" data-service="${sType}" data-position="${pType}">
+          <label class="form-label">${esc(pos.label)}</label>
+          <input type="number" min="0" max="20" value="${existing ? existing.count : 0}" class="form-input pc-input" data-service="${esc(sType)}" data-position="${esc(pType)}">
         </div>`;
     }
     html += "</div></div>";
   }
-  editor.innerHTML = html;
+  editor.innerHTML = html || '<div class="empty-state"><p>Add service types and position types first.</p></div>';
 }
 
 async function savePositionCounts() {
-  const btn = document.querySelector("#page-settings .card-header .btn-primary");
+  const btn = document.querySelector("#position-counts-editor").closest(".card").querySelector(".card-header .btn-primary");
   setBtnLoading(btn, true);
   try {
     const byService = {};
@@ -1153,6 +1214,66 @@ async function savePositionCounts() {
     toast("Position counts saved", "success");
   } finally {
     setBtnLoading(btn, false);
+  }
+}
+
+function addServiceType() {
+  const key = prompt("Service type key (lowercase, no spaces, e.g. 'friday'):");
+  if (!key) return;
+  const label = prompt("Display name (e.g. 'Friday Service'):");
+  if (!label) return;
+  const cleanKey = key.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  const types = { ...(CONSTANTS.serviceTypes || {}) };
+  types[cleanKey] = label;
+  saveServiceTypes(types);
+}
+
+function removeServiceType(key) {
+  if (!confirm(`Remove service type "${CONSTANTS.serviceTypes[key]}"?`)) return;
+  const types = { ...(CONSTANTS.serviceTypes || {}) };
+  delete types[key];
+  saveServiceTypes(types);
+}
+
+async function saveServiceTypes(types) {
+  const result = await api("/settings/service-types", "PUT", { service_types: types });
+  if (result) {
+    CONSTANTS.serviceTypes = types;
+    loadServiceTypesEditor();
+    loadPositionCountsEditor();
+    populateServiceTypeSelects();
+    toast("Service types updated", "success");
+  }
+}
+
+function addPositionType() {
+  const key = prompt("Position key (UPPERCASE, no spaces, e.g. 'PARKING'):");
+  if (!key) return;
+  const label = prompt("Display name (e.g. 'Parking Lot'):");
+  if (!label) return;
+  const desc = prompt("Short description (e.g. 'Managing parking areas'):") || "";
+  const needsSuit = confirm("Does this position require a suit?");
+  const maleOnly = confirm("Is this position male-only?");
+  const cleanKey = key.toUpperCase().replace(/[^A-Z0-9_]/g, "");
+  const types = { ...(CONSTANTS.positionTypes || {}) };
+  types[cleanKey] = { label, description: desc, requiresSuit: needsSuit, requiresMale: maleOnly };
+  savePositionTypes(types);
+}
+
+function removePositionType(key) {
+  if (!confirm(`Remove position type "${CONSTANTS.positionTypes[key]?.label || key}"?`)) return;
+  const types = { ...(CONSTANTS.positionTypes || {}) };
+  delete types[key];
+  savePositionTypes(types);
+}
+
+async function savePositionTypes(types) {
+  const result = await api("/settings/position-types", "PUT", { position_types: types });
+  if (result) {
+    CONSTANTS.positionTypes = types;
+    loadPositionTypesEditor();
+    loadPositionCountsEditor();
+    toast("Position types updated", "success");
   }
 }
 

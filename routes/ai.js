@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { Member, Service, Assignment, Unavailability, POSITION_TYPES } = require("../database");
+const { Member, Service, Assignment, Unavailability, getUnitPositionTypes } = require("../database");
 const { requireRole } = require("../middleware");
 const Groq = require("groq-sdk");
 
@@ -54,10 +54,11 @@ router.post("/report", requireRole("owner", "admin"), async (req, res) => {
     member: u.member.name, date: u.date, reason: u.reason,
   }));
 
-  const context = `You are an AI assistant for a church crowd control unit scheduling tool.
+  const positionTypes = getUnitPositionTypes(req.unit);
+  const context = `You are an AI assistant for a church service unit scheduling tool called Stewardly.
 Your role is to analyze scheduling data and provide useful reports.
 
-POSITION TYPES: ${Object.entries(POSITION_TYPES).map(([k, v]) => `${k} (${v.label} — ${v.description}, requires suit: ${v.requiresSuit}, requires male: ${v.requiresMale})`).join("; ")}
+POSITION TYPES: ${Object.entries(positionTypes).map(([k, v]) => `${k} (${v.label} — ${v.description}, requires suit: ${v.requiresSuit}, requires male: ${v.requiresMale})`).join("; ")}
 
 MEMBERS (${members.length} total):
 ${JSON.stringify(memberSummary, null, 1)}

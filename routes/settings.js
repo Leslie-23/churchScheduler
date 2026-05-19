@@ -1,9 +1,12 @@
 const router = require("express").Router();
-const { PositionCount, POSITION_TYPES, SERVICE_TYPES } = require("../database");
+const { PositionCount, Unit, getUnitPositionTypes, getUnitServiceTypes, DEFAULT_POSITION_TYPES, DEFAULT_SERVICE_TYPES } = require("../database");
 const { requireRole } = require("../middleware");
 
 router.get("/constants", (req, res) => {
-  res.json({ positionTypes: POSITION_TYPES, serviceTypes: SERVICE_TYPES });
+  res.json({
+    positionTypes: getUnitPositionTypes(req.unit),
+    serviceTypes: getUnitServiceTypes(req.unit),
+  });
 });
 
 router.get("/position-counts/:serviceType", async (req, res) => {
@@ -24,6 +27,42 @@ router.put("/position-counts/:serviceType", requireRole("owner", "admin"), async
     );
   }
   res.json({ success: true });
+});
+
+router.get("/position-types", (req, res) => {
+  res.json(getUnitPositionTypes(req.unit));
+});
+
+router.put("/position-types", requireRole("owner"), async (req, res) => {
+  const { position_types } = req.body;
+  if (!position_types || typeof position_types !== "object") {
+    return res.status(400).json({ error: "position_types object required" });
+  }
+  await Unit.findByIdAndUpdate(req.unit._id, { position_types });
+  res.json({ success: true });
+});
+
+router.post("/position-types/reset", requireRole("owner"), async (req, res) => {
+  await Unit.findByIdAndUpdate(req.unit._id, { position_types: null });
+  res.json({ success: true, position_types: DEFAULT_POSITION_TYPES });
+});
+
+router.get("/service-types", (req, res) => {
+  res.json(getUnitServiceTypes(req.unit));
+});
+
+router.put("/service-types", requireRole("owner"), async (req, res) => {
+  const { service_types } = req.body;
+  if (!service_types || typeof service_types !== "object") {
+    return res.status(400).json({ error: "service_types object required" });
+  }
+  await Unit.findByIdAndUpdate(req.unit._id, { service_types });
+  res.json({ success: true });
+});
+
+router.post("/service-types/reset", requireRole("owner"), async (req, res) => {
+  await Unit.findByIdAndUpdate(req.unit._id, { service_types: null });
+  res.json({ success: true, service_types: DEFAULT_SERVICE_TYPES });
 });
 
 module.exports = router;

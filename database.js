@@ -3,7 +3,7 @@ const crypto = require("crypto");
 
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/churchscheduler";
 
-const POSITION_TYPES = {
+const DEFAULT_POSITION_TYPES = {
   DOOR: { label: "Door", description: "Entry/exit management", requiresSuit: false, requiresMale: false },
   STANDING: { label: "Standing", description: "Visible hall positions", requiresSuit: true, requiresMale: false },
   USHER: { label: "Usher", description: "Guiding people to seats", requiresSuit: false, requiresMale: false },
@@ -12,13 +12,11 @@ const POSITION_TYPES = {
   CHAIRS: { label: "Chair Arrangement", description: "Setting up and arranging chairs", requiresSuit: false, requiresMale: true },
 };
 
-const SERVICE_TYPES = {
+const DEFAULT_SERVICE_TYPES = {
   sunday: "Sunday Service",
   wednesday: "Wednesday Service",
   special: "Special Service",
 };
-
-const VALID_POSITIONS = Object.keys(POSITION_TYPES);
 
 // --- Auth Schemas ---
 
@@ -42,6 +40,8 @@ const unitSchema = new mongoose.Schema({
   description: { type: String, default: "" },
   invite_code: { type: String, unique: true },
   created_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  position_types: { type: mongoose.Schema.Types.Mixed, default: null },
+  service_types: { type: mongoose.Schema.Types.Mixed, default: null },
 }, { timestamps: true });
 
 unitSchema.pre("save", function (next) {
@@ -69,8 +69,9 @@ const memberSchema = new mongoose.Schema({
   phone: { type: String, trim: true, default: "" },
   active: { type: Boolean, default: true },
   notes: { type: String, default: "" },
+  service_availability: { type: String, enum: ["both", "first_only", "second_only"], default: "both" },
   skills: [{
-    position_type: { type: String, enum: VALID_POSITIONS },
+    position_type: { type: String },
     rating: { type: Number, min: 1, max: 5, default: 3 },
   }],
 }, { timestamps: true });
@@ -78,7 +79,8 @@ const memberSchema = new mongoose.Schema({
 const serviceSchema = new mongoose.Schema({
   unit: { type: mongoose.Schema.Types.ObjectId, ref: "Unit", required: true, index: true },
   date: { type: String, required: true },
-  service_type: { type: String, required: true, enum: Object.keys(SERVICE_TYPES) },
+  service_type: { type: String, required: true },
+  service_slot: { type: Number, enum: [1, 2], default: 1 },
   name: { type: String, default: "" },
   status: { type: String, enum: ["draft", "published"], default: "draft" },
 }, { timestamps: true });
@@ -86,7 +88,7 @@ const serviceSchema = new mongoose.Schema({
 const assignmentSchema = new mongoose.Schema({
   service: { type: mongoose.Schema.Types.ObjectId, ref: "Service", required: true },
   member: { type: mongoose.Schema.Types.ObjectId, ref: "Member", required: true },
-  position_type: { type: String, required: true, enum: VALID_POSITIONS },
+  position_type: { type: String, required: true },
   attendance: { type: String, enum: ["pending", "present", "absent", "excused"], default: "pending" },
 });
 assignmentSchema.index({ service: 1, member: 1 }, { unique: true });
@@ -101,8 +103,8 @@ unavailabilitySchema.index({ member: 1, date: 1 }, { unique: true });
 
 const positionCountSchema = new mongoose.Schema({
   unit: { type: mongoose.Schema.Types.ObjectId, ref: "Unit", required: true },
-  service_type: { type: String, required: true, enum: Object.keys(SERVICE_TYPES) },
-  position_type: { type: String, required: true, enum: VALID_POSITIONS },
+  service_type: { type: String, required: true },
+  position_type: { type: String, required: true },
   count: { type: Number, default: 1, min: 0 },
 });
 positionCountSchema.index({ unit: 1, service_type: 1, position_type: 1 }, { unique: true });
@@ -125,26 +127,34 @@ async function connectDb() {
   console.log("Connected to MongoDB");
 }
 
-async function seedPositionCounts(unitId) {
-  const defaults = [
-    ["sunday", "DOOR", 4], ["sunday", "STANDING", 4], ["sunday", "USHER", 3],
-    ["sunday", "OVERFLOW", 2], ["sunday", "ESCORT", 2], ["sunday", "CHAIRS", 4],
-    ["wednesday", "DOOR", 2], ["wednesday", "STANDING", 2], ["wednesday", "USHER", 2],
-    ["wednesday", "OVERFLOW", 1], ["wednesday", "ESCORT", 2], ["wednesday", "CHAIRS", 3],
-    ["special", "DOOR", 4], ["special", "STANDING", 4], ["special", "USHER", 3],
-    ["special", "OVERFLOW", 2], ["special", "ESCORT", 2], ["special", "CHAIRS", 4],
-  ];
+function getUnitPositionTypes(unit) {
+  return unit && unit.position_types ? unit.position_types : DEFAULT_POSITION_TYPES;
+}
 
-  await PositionCount.insertMany(
-    defaults.map(([service_type, position_type, count]) => ({
-      unit: unitId, service_type, position_type, count,
-    }))
-  );
+function getUnitServiceTypes(unit) {
+  return unit && unit.service_types ? unit.service_types : DEFAULT_SERVICE_TYPES;
+}
+
+async function seedPositionCounts(unitId) {
+  const unit = await Unit.findById(unitId).lean();
+  const serviceTypes = getUnitServiceTypes(unit);
+  const positionTypes = getUnitPositionTypes(unit);
+  const defaults = [];
+  for (const sType of Object.keys(serviceTypes)) {
+    for (const pType of Object.keys(positionTypes)) {
+      defaults.push({ unit: unitId, service_type: sType, position_type: pType, count: 2 });
+    }
+  }
+  if (defaults.length > 0) {
+    await PositionCount.insertMany(defaults);
+  }
 }
 
 module.exports = {
   connectDb,
   seedPositionCounts,
+  getUnitPositionTypes,
+  getUnitServiceTypes,
   User,
   Unit,
   UnitMembership,
@@ -153,6 +163,6 @@ module.exports = {
   Assignment,
   Unavailability,
   PositionCount,
-  POSITION_TYPES,
-  SERVICE_TYPES,
+  DEFAULT_POSITION_TYPES,
+  DEFAULT_SERVICE_TYPES,
 };

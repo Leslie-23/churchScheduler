@@ -3,15 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Church Scheduler</title>
+  <title>Stewardly</title>
   <link rel="stylesheet" href="/app/style.css">
 </head>
 <body>
 
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <h1>Church<br>Scheduler</h1>
-      <p>Service Unit Scheduler</p>
+      <div class="brand-logo">
+        <svg viewBox="0 0 40 40" width="32" height="32" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+          <g transform="rotate(-15 20 20)"><line x1="20" y1="4" x2="20" y2="36"/><line x1="10" y1="14" x2="30" y2="14"/></g>
+        </svg>
+      </div>
+      <div>
+        <h1>Stewardly</h1>
+        <p>Service Unit Scheduler</p>
+      </div>
     </div>
     <nav class="sidebar-nav">
       <a class="nav-link active" data-page="dashboard">
@@ -37,6 +44,10 @@
       <a class="nav-link" data-page="reports" data-min-role="admin">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         AI Reports
+      </a>
+      <a class="nav-link" data-page="help">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Help
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -85,6 +96,13 @@
                 <select class="form-select" id="quick-type"></select>
               </div>
               <div class="form-group">
+                <label class="form-label">Service Slot</label>
+                <select class="form-select" id="quick-slot">
+                  <option value="1">1st Service</option>
+                  <option value="2">2nd Service</option>
+                </select>
+              </div>
+              <div class="form-group">
                 <label class="form-label">Name (optional)</label>
                 <input type="text" class="form-input" id="quick-name" placeholder="e.g. Easter Sunday">
               </div>
@@ -108,7 +126,7 @@
           <div class="card-body compact">
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Name</th><th>Gender</th><th>Suit</th><th>Phone</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+                <thead><tr><th>Name</th><th>Gender</th><th>Suit</th><th>Phone</th><th>Availability</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
                 <tbody id="members-table"></tbody>
               </table>
             </div>
@@ -131,7 +149,7 @@
           <div class="card-body compact">
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+                <thead><tr><th>Date</th><th>Type</th><th>Slot</th><th>Name</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
                 <tbody id="services-table"></tbody>
               </table>
             </div>
@@ -173,9 +191,25 @@
 
       <!-- SETTINGS -->
       <div id="page-settings" class="page">
-        <div class="card">
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h3>Service Types</h3>
+              <button class="btn btn-primary btn-sm" onclick="addServiceType()" data-min-role="owner">+ Add</button>
+            </div>
+            <div class="card-body" id="service-types-editor"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3>Position Types</h3>
+              <button class="btn btn-primary btn-sm" onclick="addPositionType()" data-min-role="owner">+ Add</button>
+            </div>
+            <div class="card-body" id="position-types-editor"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1.25rem">
           <div class="card-header">
-            <h3>Position Counts</h3>
+            <h3>Position Counts per Service</h3>
             <button class="btn btn-primary" onclick="savePositionCounts()">Save</button>
           </div>
           <div class="card-body" id="position-counts-editor"></div>
@@ -188,7 +222,7 @@
           <div class="card-header"><h3>AI Reports</h3></div>
           <div class="card-body">
             <div id="ai-disabled" style="display:none">
-              <div class="alert alert-warning">Groq AI is not configured. Start the server with <strong>GROQ_API_KEY=your_key</strong> to enable reports.</div>
+              <div class="alert alert-warning">Groq AI is not configured. Set <strong>GROQ_API_KEY</strong> in your environment to enable reports.</div>
             </div>
             <div id="ai-enabled" style="display:none">
               <div class="ai-quick-actions" style="margin-bottom:1rem">
@@ -258,6 +292,126 @@
                   <button class="btn btn-primary" onclick="sendBroadcast(this)">Send to All</button>
                 </div>
                 <div id="sms-broadcast-result" style="margin-top:1rem"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HELP -->
+      <div id="page-help" class="page">
+        <div class="card">
+          <div class="card-header"><h3>How to Use Stewardly</h3></div>
+          <div class="card-body help-content">
+            <div class="help-section">
+              <h4>Getting Started</h4>
+              <ol>
+                <li><strong>Create or join a unit</strong> — After signing up, create a new service unit (e.g. "Ushering Team") or join one using an invite code from your leader.</li>
+                <li><strong>Add your team members</strong> — Go to the Members page and add each person with their name, phone, gender, and whether they own a suit. Set their skill ratings for each position.</li>
+                <li><strong>Set up position counts</strong> — In Settings, configure how many people you need for each position per service type (e.g. 4 door stewards for Sunday).</li>
+                <li><strong>Create a service and generate</strong> — Go to Schedule, create a new service (pick a date and type), then hit Generate. The system assigns everyone automatically.</li>
+              </ol>
+            </div>
+
+            <div class="help-section">
+              <h4>Understanding the Schedule</h4>
+              <p>When you generate a schedule, the system considers <strong>4 factors</strong> to pick the best person for each position:</p>
+              <ul>
+                <li><strong>Skill Rating</strong> — How well they can handle that position (1-5 stars)</li>
+                <li><strong>Fair Rotation</strong> — People who haven't served recently get priority</li>
+                <li><strong>Variety</strong> — People aren't stuck at the same position every time</li>
+                <li><strong>Reliability</strong> — Members with good attendance records score higher</li>
+              </ul>
+              <p>The system also respects <strong>position requirements</strong> — if a position requires a suit or is male-only, only eligible members are considered.</p>
+            </div>
+
+            <div class="help-section">
+              <h4>1st & 2nd Service</h4>
+              <p>If your church runs two services, you can schedule members for each one separately:</p>
+              <ul>
+                <li>When adding a member, set their <strong>Service Availability</strong> — "Both Services", "1st Only", or "2nd Only"</li>
+                <li>When creating a service, choose the <strong>Service Slot</strong> — 1st or 2nd</li>
+                <li>The scheduler will only assign members who are available for that slot</li>
+              </ul>
+            </div>
+
+            <div class="help-section">
+              <h4>Replacing Someone</h4>
+              <p>If a member can't make it:</p>
+              <ol>
+                <li>Open the service schedule</li>
+                <li>Click <strong>"Can't Make It"</strong> next to their name</li>
+                <li>The system suggests ranked replacements with scores and reasons</li>
+                <li>Pick one and confirm — the original member gets marked unavailable for that date</li>
+              </ol>
+            </div>
+
+            <div class="help-section">
+              <h4>Attendance Tracking</h4>
+              <p>After a service, mark who showed up:</p>
+              <ol>
+                <li>Open the service schedule</li>
+                <li>Click <strong>"Mark Attendance"</strong></li>
+                <li>Mark each person as Present, Absent, or Excused</li>
+                <li>Click <strong>"Save Attendance"</strong></li>
+              </ol>
+              <p>Members with poor attendance (below 70%) appear in the <strong>Needs Follow-Up</strong> card on the dashboard. Their reliability score also drops, meaning the scheduler will prefer more reliable members.</p>
+            </div>
+
+            <div class="help-section">
+              <h4>SMS Notifications</h4>
+              <p>Send duty reminders or broadcast messages to your team via SMS:</p>
+              <ul>
+                <li><strong>Duty Notifications</strong> — Select a service and send personalized messages to every assigned member (their name, position, and date)</li>
+                <li><strong>Broadcast</strong> — Send a custom message to all active members (for meetings, announcements, etc.)</li>
+              </ul>
+              <p>Members without phone numbers are automatically skipped.</p>
+            </div>
+
+            <div class="help-section">
+              <h4>Custom Positions & Service Types</h4>
+              <p>The default positions (Door, Standing, Usher, etc.) can be customized by the unit owner:</p>
+              <ul>
+                <li>Go to <strong>Settings</strong></li>
+                <li>Add, edit, or remove <strong>Service Types</strong> (e.g. add "Friday Service")</li>
+                <li>Add, edit, or remove <strong>Position Types</strong> (e.g. add "Sound Desk" or "Parking")</li>
+                <li>Set requirements: whether a position needs a suit or is male-only</li>
+                <li>After changing positions/types, update your <strong>Position Counts</strong> to set how many people each slot needs</li>
+              </ul>
+            </div>
+
+            <div class="help-section">
+              <h4>Roles</h4>
+              <ul>
+                <li><strong>Owner</strong> — Full control: manage members, schedules, settings, invite codes, roles, custom positions/types</li>
+                <li><strong>Admin</strong> — Can manage members, create schedules, send SMS, view reports</li>
+                <li><strong>Member</strong> — Can view schedules and their own profile</li>
+              </ul>
+            </div>
+
+            <div class="help-section">
+              <h4>Troubleshooting</h4>
+              <div class="help-faq">
+                <div class="faq-item">
+                  <strong>"Schedule generated with warnings"</strong>
+                  <p>This means some positions couldn't be fully filled. You either don't have enough members, or available members don't meet the position requirements (e.g. suit, gender). Add more members or adjust position counts.</p>
+                </div>
+                <div class="faq-item">
+                  <strong>"A service already exists on this date"</strong>
+                  <p>You already created a service of this type for this date and slot. Check the schedule page — it's already there.</p>
+                </div>
+                <div class="faq-item">
+                  <strong>SMS not sending</strong>
+                  <p>Check that the ARKESEL_API_KEY is set in your server environment. Members without phone numbers are skipped. Phone numbers must be valid Ghana numbers.</p>
+                </div>
+                <div class="faq-item">
+                  <strong>"Not a member of this unit"</strong>
+                  <p>You may have been removed from the unit, or your session is pointing to the wrong unit. Try switching units in the top bar or logging out and back in.</p>
+                </div>
+                <div class="faq-item">
+                  <strong>Page shows blank or spinner stuck</strong>
+                  <p>Refresh the page. If it persists, check your internet connection. If you're an admin, make sure the server is running.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -356,7 +510,7 @@
             <input type="text" class="form-input" id="m-phone" placeholder="080xxxxxxxx">
           </div>
         </div>
-        <div class="grid grid-2">
+        <div class="grid grid-3">
           <div class="form-group">
             <label class="form-label">Gender</label>
             <select class="form-select" id="m-gender">
@@ -370,6 +524,14 @@
               <label class="toggle"><input type="checkbox" id="m-suit"><span class="slider"></span></label>
               <span id="m-suit-label" style="font-size:0.8rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em">No</span>
             </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Service Availability</label>
+            <select class="form-select" id="m-availability">
+              <option value="both">Both Services</option>
+              <option value="first_only">1st Service Only</option>
+              <option value="second_only">2nd Service Only</option>
+            </select>
           </div>
         </div>
         <div class="form-group">
@@ -401,9 +563,18 @@
           <label class="form-label">Date</label>
           <input type="date" class="form-input" id="s-date">
         </div>
-        <div class="form-group">
-          <label class="form-label">Service Type</label>
-          <select class="form-select" id="s-type"></select>
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label class="form-label">Service Type</label>
+            <select class="form-select" id="s-type"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Service Slot</label>
+            <select class="form-select" id="s-slot">
+              <option value="1">1st Service</option>
+              <option value="2">2nd Service</option>
+            </select>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Name (optional)</label>

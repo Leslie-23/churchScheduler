@@ -47,20 +47,25 @@ a { color: var(--black); }
   font-size: 1.5rem;
   text-decoration: none;
   letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
-.landing-nav .nav-links { display: flex; gap: 0.75rem; }
+.landing-nav .logo .logo-icon { flex-shrink: 0; }
+.landing-nav .nav-links { display: flex; gap: 0.75rem; align-items: center; }
 .landing-nav .nav-links a {
   text-decoration: none;
   font-weight: 600;
   font-size: 0.85rem;
   padding: 0.5rem 1.2rem;
-  border: 1.5px solid var(--black);
+  border: 1.5px solid transparent;
   transition: background 0.15s, color 0.15s;
 }
-.landing-nav .nav-links a:hover,
+.landing-nav .nav-links a:hover { border-color: var(--black); }
 .landing-nav .nav-links a.primary {
   background: var(--black);
   color: var(--white);
+  border-color: var(--black);
 }
 
 /* --- HERO --- */
@@ -76,7 +81,7 @@ a { color: var(--black); }
 .hero p {
   font-size: 1.15rem;
   color: var(--gray-600);
-  max-width: 540px;
+  max-width: 580px;
   margin: 0 auto 2.5rem;
 }
 .hero .cta-group {
@@ -103,67 +108,7 @@ a { color: var(--black); }
 .btn-outline { background: var(--white); color: var(--black); }
 .btn-outline:hover { background: var(--black); color: var(--white); }
 
-/* --- FEATURES --- */
-.features {
-  padding: 5rem 2rem;
-  border-bottom: 1.5px solid var(--black);
-}
-.features h2 {
-  font-size: 2.5rem;
-  text-align: center;
-  margin-bottom: 3rem;
-}
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.5rem;
-}
-.feature-card {
-  border: 1.5px solid var(--black);
-  padding: 2rem 1.5rem;
-}
-.feature-card h3 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-}
-.feature-card p {
-  font-size: 0.88rem;
-  color: var(--gray-600);
-  line-height: 1.6;
-}
-
-/* --- HOW IT WORKS --- */
-.how-it-works {
-  padding: 5rem 2rem;
-  border-bottom: 1.5px solid var(--black);
-}
-.how-it-works h2 {
-  font-size: 2.5rem;
-  text-align: center;
-  margin-bottom: 3rem;
-}
-.steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 2rem;
-  text-align: center;
-}
-.step-num {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 3.5rem;
-  line-height: 1;
-  margin-bottom: 0.5rem;
-}
-.steps h3 {
-  font-size: 1.3rem;
-  margin-bottom: 0.4rem;
-}
-.steps p {
-  font-size: 0.85rem;
-  color: var(--gray-600);
-}
-
-/* --- PROBLEM SECTION --- */
+/* --- PROBLEM --- */
 .problem-section {
   padding: 5rem 2rem;
   border-bottom: 1.5px solid var(--black);
@@ -208,7 +153,34 @@ a { color: var(--black); }
   color: var(--gray-600);
 }
 
-/* --- FEATURE ICON --- */
+/* --- FEATURES --- */
+.features {
+  padding: 5rem 2rem;
+  border-bottom: 1.5px solid var(--black);
+}
+.features h2 {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 3rem;
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+.feature-card {
+  border: 1.5px solid var(--black);
+  padding: 2rem 1.5rem;
+}
+.feature-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.feature-card p {
+  font-size: 0.88rem;
+  color: var(--gray-600);
+  line-height: 1.6;
+}
 .feature-icon {
   font-family: 'Bebas Neue', sans-serif;
   font-size: 2rem;
@@ -216,13 +188,12 @@ a { color: var(--black); }
   color: var(--gray-400);
 }
 
-/* --- POSITIONS SECTION --- */
-.positions-section {
+/* --- HOW IT WORKS --- */
+.how-it-works {
   padding: 5rem 2rem;
   border-bottom: 1.5px solid var(--black);
-  background: var(--gray-50);
 }
-.positions-section h2 {
+.how-it-works h2 {
   font-size: 2.5rem;
   text-align: center;
   margin-bottom: 0.5rem;
@@ -236,36 +207,63 @@ a { color: var(--black); }
   margin-left: auto;
   margin-right: auto;
 }
-.positions-grid {
+.steps-detailed {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+.step-card {
+  border: 1.5px solid var(--black);
+  padding: 2rem 1.5rem;
+}
+.step-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  color: var(--gray-400);
+}
+.step-card h3 {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+.step-card p {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  line-height: 1.6;
+}
+
+/* --- WHO SECTION --- */
+.who-section {
+  padding: 5rem 2rem;
+  border-bottom: 1.5px solid var(--black);
+  background: var(--gray-50);
+}
+.who-section h2 {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.who-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 1rem;
 }
-.position-card {
+.who-card {
   border: 1.5px solid var(--black);
   padding: 1.25rem;
   text-align: center;
 }
-.position-card h4 {
-  font-size: 1.2rem;
-  margin-bottom: 0.2rem;
+.who-card h4 {
+  font-size: 1.15rem;
+  margin-bottom: 0.3rem;
 }
-.position-card p {
+.who-card p {
   font-size: 0.78rem;
   color: var(--gray-600);
-  margin-bottom: 0.4rem;
-}
-.position-card .req {
-  display: inline-block;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border: 1px solid var(--black);
-  padding: 0.15rem 0.5rem;
 }
 
-/* --- CTA SECTION --- */
+/* --- CTA --- */
 .cta-section {
   padding: 5rem 2rem;
   text-align: center;
@@ -461,17 +459,18 @@ a { color: var(--black); }
 
 @media (max-width: 768px) {
   .problem-grid { grid-template-columns: 1fr; gap: 2rem; }
-  .positions-grid { grid-template-columns: repeat(2, 1fr); }
+  .who-grid { grid-template-columns: repeat(2, 1fr); }
+  .landing-nav .nav-links a:not(.primary) { display: none; }
 }
 
 @media (max-width: 600px) {
   .hero h1 { font-size: 2.5rem; }
   .hero { padding: 3rem 1.5rem; }
-  .features, .how-it-works, .problem-section, .positions-section, .cta-section { padding: 3rem 1.5rem; }
+  .features, .how-it-works, .problem-section, .who-section, .cta-section { padding: 3rem 1.5rem; }
   .landing-nav { padding: 1rem; }
   .landing-nav .logo { font-size: 1.2rem; }
   .auth-card, .onboarding-card { padding: 2rem 1.5rem; }
   .choice-grid { grid-template-columns: 1fr; }
-  .positions-grid { grid-template-columns: 1fr 1fr; }
-  .features h2, .how-it-works h2, .problem-section h2, .positions-section h2, .cta-section h2 { font-size: 2rem; }
+  .who-grid { grid-template-columns: 1fr 1fr; }
+  .features h2, .how-it-works h2, .problem-section h2, .who-section h2, .cta-section h2 { font-size: 2rem; }
 }

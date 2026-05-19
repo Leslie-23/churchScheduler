@@ -1,13 +1,19 @@
-const { Member, Service, Assignment, Unavailability, PositionCount, POSITION_TYPES } = require("./database");
+const { Member, Service, Assignment, Unavailability, PositionCount, Unit, getUnitPositionTypes } = require("./database");
 
-async function getEligibleMembers(date, positionType, unitId) {
-  const pos = POSITION_TYPES[positionType];
+async function getEligibleMembers(date, positionType, unitId, positionTypes, serviceSlot) {
+  const pos = positionTypes[positionType] || {};
 
   const unavailableIds = (await Unavailability.find({ date, unit: unitId })).map((u) => u.member);
 
   const filter = { active: true, unit: unitId, _id: { $nin: unavailableIds } };
   if (pos.requiresSuit) filter.has_suit = true;
   if (pos.requiresMale) filter.gender = "M";
+
+  if (serviceSlot === 1) {
+    filter.service_availability = { $in: ["both", "first_only"] };
+  } else if (serviceSlot === 2) {
+    filter.service_availability = { $in: ["both", "second_only"] };
+  }
 
   const members = await Member.find(filter).lean();
 
@@ -68,6 +74,8 @@ async function generateSchedule(serviceId) {
   if (!service) return { error: "Service not found" };
 
   const unitId = service.unit;
+  const unit = await Unit.findById(unitId).lean();
+  const positionTypes = getUnitPositionTypes(unit);
 
   await Assignment.deleteMany({ service: serviceId });
 
@@ -77,14 +85,14 @@ async function generateSchedule(serviceId) {
   const assignments = [];
   const warnings = [];
 
-  const positionOrder = ["ESCORT", "STANDING", "DOOR", "USHER", "OVERFLOW", "CHAIRS"];
+  const positionOrder = Object.keys(positionTypes);
 
   for (const positionType of positionOrder) {
     const countRow = counts.find((c) => c.position_type === positionType);
     const needed = countRow ? countRow.count : 0;
     if (needed === 0) continue;
 
-    const eligible = (await getEligibleMembers(service.date, positionType, unitId)).filter(
+    const eligible = (await getEligibleMembers(service.date, positionType, unitId, positionTypes, service.service_slot)).filter(
       (m) => !assignedIds.has(m._id.toString())
     );
 
@@ -105,7 +113,7 @@ async function generateSchedule(serviceId) {
     }
 
     if (filled < needed) {
-      warnings.push(`${POSITION_TYPES[positionType].label}: filled ${filled}/${needed}`);
+      warnings.push(`${positionTypes[positionType]?.label || positionType}: filled ${filled}/${needed}`);
     }
   }
 
@@ -117,6 +125,8 @@ async function suggestReplacements(serviceId, positionType, removeMemberId) {
   if (!service) return { error: "Service not found" };
 
   const unitId = service.unit;
+  const unit = await Unit.findById(unitId).lean();
+  const positionTypes = getUnitPositionTypes(unit);
 
   const currentAssignments = await Assignment.find({ service: serviceId }).lean();
   const alreadyAssignedIds = new Set(
@@ -124,7 +134,7 @@ async function suggestReplacements(serviceId, positionType, removeMemberId) {
   );
   alreadyAssignedIds.delete(removeMemberId.toString());
 
-  const eligible = (await getEligibleMembers(service.date, positionType, unitId)).filter(
+  const eligible = (await getEligibleMembers(service.date, positionType, unitId, positionTypes, service.service_slot)).filter(
     (m) => !alreadyAssignedIds.has(m._id.toString())
   );
 
@@ -134,15 +144,16 @@ async function suggestReplacements(serviceId, positionType, removeMemberId) {
     const daysSinceAny = await getDaysSinceLastAssignment(m._id, service.date);
     const daysSinceThis = await getDaysSinceLastAssignment(m._id, service.date, positionType);
 
+    const pos = positionTypes[positionType] || {};
     const reasons = [];
-    if (m.skill_rating >= 4) reasons.push(`High ${POSITION_TYPES[positionType].label.toLowerCase()} skill (${m.skill_rating}/5)`);
-    else if (m.skill_rating >= 3) reasons.push(`Decent ${POSITION_TYPES[positionType].label.toLowerCase()} skill (${m.skill_rating}/5)`);
+    if (m.skill_rating >= 4) reasons.push(`High ${(pos.label || positionType).toLowerCase()} skill (${m.skill_rating}/5)`);
+    else if (m.skill_rating >= 3) reasons.push(`Decent ${(pos.label || positionType).toLowerCase()} skill (${m.skill_rating}/5)`);
 
     if (daysSinceAny >= 14) reasons.push("Has been resting — due for rotation");
     else if (daysSinceAny >= 7) reasons.push("Served last week — fair rotation");
 
     if (daysSinceThis >= 30) reasons.push("Fresh to this position");
-    if (m.has_suit && POSITION_TYPES[positionType].requiresSuit) reasons.push("Has suit");
+    if (m.has_suit && pos.requiresSuit) reasons.push("Has suit");
 
     suggestions.push({
       member: { _id: m._id, name: m.name, gender: m.gender, has_suit: m.has_suit },
