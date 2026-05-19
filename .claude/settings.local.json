@@ -8,7 +8,8 @@
       "Bash(node server.js)",
       "WebFetch(domain:localhost)",
       "Bash(npm install *)",
-      "PowerShell($token = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YTBiZjUwNGRkODYwZGE3YjE3N2I3OWEiLCJpYXQiOjE3NzkxNjg1NjksImV4cCI6MTc3OTc3MzM2OX0.ttbAz4u33tqofI_KsSBCiI3pBr1R0k4ehkYyqdpZubE\"; $r = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/me\" -Method GET -Headers @{\"Authorization\"=\"Bearer $token\"} -UseBasicParsing; $r.Content)"
+      "PowerShell($token = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YTBiZjUwNGRkODYwZGE3YjE3N2I3OWEiLCJpYXQiOjE3NzkxNjg1NjksImV4cCI6MTc3OTc3MzM2OX0.ttbAz4u33tqofI_KsSBCiI3pBr1R0k4ehkYyqdpZubE\"; $r = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/me\" -Method GET -Headers @{\"Authorization\"=\"Bearer $token\"} -UseBasicParsing; $r.Content)",
+      "Bash(git commit *)"
     ]
   }
 }

@@ -614,6 +614,14 @@ function setupSuitToggle() {
   const cb = document.getElementById("m-suit");
   const label = document.getElementById("m-suit-label");
   cb.addEventListener("change", () => { label.textContent = cb.checked ? "Yes" : "No"; });
+
+  const suitCb = document.getElementById("ptype-suit");
+  const suitLbl = document.getElementById("ptype-suit-label");
+  suitCb.addEventListener("change", () => { suitLbl.textContent = suitCb.checked ? "Yes" : "No"; });
+
+  const maleCb = document.getElementById("ptype-male");
+  const maleLbl = document.getElementById("ptype-male-label");
+  maleCb.addEventListener("change", () => { maleLbl.textContent = maleCb.checked ? "Yes" : "No"; });
 }
 
 // --- Services (clickable rows) ---
@@ -1141,13 +1149,17 @@ function loadServiceTypesEditor() {
     editor.innerHTML = '<div class="empty-state"><p>No service types configured.</p></div>';
     return;
   }
+  const isOwner = activeRole === "owner";
   editor.innerHTML = Object.entries(types).map(([key, label]) => `
     <div class="settings-type-item" data-key="${esc(key)}">
       <div style="flex:1">
         <strong>${esc(label)}</strong>
         <span style="color:var(--gray-400); font-size:0.75rem; margin-left:0.5rem">${esc(key)}</span>
       </div>
-      ${activeRole === "owner" ? `<button class="btn btn-danger btn-sm" onclick="removeServiceType('${esc(key)}')">Remove</button>` : ""}
+      ${isOwner ? `<div class="btn-group">
+        <button class="btn btn-outline btn-sm" onclick="editServiceType('${esc(key)}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="removeServiceType('${esc(key)}')">Remove</button>
+      </div>` : ""}
     </div>
   `).join("");
 }
@@ -1159,6 +1171,7 @@ function loadPositionTypesEditor() {
     editor.innerHTML = '<div class="empty-state"><p>No position types configured.</p></div>';
     return;
   }
+  const isOwner = activeRole === "owner";
   editor.innerHTML = Object.entries(types).map(([key, pos]) => {
     const reqs = [];
     if (pos.requiresSuit) reqs.push("Suit");
@@ -1170,7 +1183,10 @@ function loadPositionTypesEditor() {
         <span style="color:var(--gray-600); font-size:0.78rem; margin-left:0.3rem">${esc(pos.description || "")}</span>
         ${reqs.length ? `<span class="badge" style="font-size:0.6rem; margin-left:0.3rem">${reqs.join(" + ")}</span>` : ""}
       </div>
-      ${activeRole === "owner" ? `<button class="btn btn-danger btn-sm" onclick="removePositionType('${esc(key)}')">Remove</button>` : ""}
+      ${isOwner ? `<div class="btn-group">
+        <button class="btn btn-outline btn-sm" onclick="editPositionType('${esc(key)}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="removePositionType('${esc(key)}')">Remove</button>
+      </div>` : ""}
     </div>
   `;
   }).join("");
@@ -1217,63 +1233,172 @@ async function savePositionCounts() {
   }
 }
 
+// --- Service Type Modal ---
+
 function addServiceType() {
-  const key = prompt("Service type key (lowercase, no spaces, e.g. 'friday'):");
-  if (!key) return;
-  const label = prompt("Display name (e.g. 'Friday Service'):");
-  if (!label) return;
-  const cleanKey = key.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  document.getElementById("stype-modal-title").textContent = "Add Service Type";
+  document.getElementById("stype-edit-key").value = "";
+  document.getElementById("stype-key").value = "";
+  document.getElementById("stype-key").disabled = false;
+  document.getElementById("stype-label").value = "";
+  document.getElementById("stype-modal").classList.add("active");
+  document.getElementById("stype-key").focus();
+}
+
+function editServiceType(key) {
+  const label = (CONSTANTS.serviceTypes || {})[key] || "";
+  document.getElementById("stype-modal-title").textContent = "Edit Service Type";
+  document.getElementById("stype-edit-key").value = key;
+  document.getElementById("stype-key").value = key;
+  document.getElementById("stype-key").disabled = true;
+  document.getElementById("stype-label").value = label;
+  document.getElementById("stype-modal").classList.add("active");
+  document.getElementById("stype-label").focus();
+}
+
+function closeStypeModal() {
+  document.getElementById("stype-modal").classList.remove("active");
+}
+
+async function saveStypeModal() {
+  const editKey = document.getElementById("stype-edit-key").value;
+  const rawKey = document.getElementById("stype-key").value.trim();
+  const label = document.getElementById("stype-label").value.trim();
+
+  if (!rawKey) return toast("Key is required", "warning");
+  if (!label) return toast("Display name is required", "warning");
+
+  const cleanKey = rawKey.toLowerCase().replace(/[^a-z0-9_]/g, "");
+  if (!cleanKey) return toast("Key must contain letters or numbers", "warning");
+
   const types = { ...(CONSTANTS.serviceTypes || {}) };
+
+  if (!editKey && types[cleanKey]) return toast("A service type with this key already exists", "warning");
+
   types[cleanKey] = label;
-  saveServiceTypes(types);
+
+  const btn = document.querySelector("#stype-modal .modal-footer .btn-primary");
+  setBtnLoading(btn, true);
+  try {
+    const result = await api("/settings/service-types", "PUT", { service_types: types });
+    if (result) {
+      CONSTANTS.serviceTypes = types;
+      loadServiceTypesEditor();
+      loadPositionCountsEditor();
+      populateServiceTypeSelects();
+      closeStypeModal();
+      toast(editKey ? "Service type updated" : "Service type added", "success");
+    }
+  } finally {
+    setBtnLoading(btn, false);
+  }
 }
 
 function removeServiceType(key) {
-  if (!confirm(`Remove service type "${CONSTANTS.serviceTypes[key]}"?`)) return;
+  if (!confirm(`Remove service type "${CONSTANTS.serviceTypes[key]}"? This cannot be undone.`)) return;
   const types = { ...(CONSTANTS.serviceTypes || {}) };
   delete types[key];
-  saveServiceTypes(types);
+  saveServiceTypesQuiet(types);
 }
 
-async function saveServiceTypes(types) {
+async function saveServiceTypesQuiet(types) {
   const result = await api("/settings/service-types", "PUT", { service_types: types });
   if (result) {
     CONSTANTS.serviceTypes = types;
     loadServiceTypesEditor();
     loadPositionCountsEditor();
     populateServiceTypeSelects();
-    toast("Service types updated", "success");
+    toast("Service type removed", "success");
   }
 }
 
+// --- Position Type Modal ---
+
 function addPositionType() {
-  const key = prompt("Position key (UPPERCASE, no spaces, e.g. 'PARKING'):");
-  if (!key) return;
-  const label = prompt("Display name (e.g. 'Parking Lot'):");
-  if (!label) return;
-  const desc = prompt("Short description (e.g. 'Managing parking areas'):") || "";
-  const needsSuit = confirm("Does this position require a suit?");
-  const maleOnly = confirm("Is this position male-only?");
-  const cleanKey = key.toUpperCase().replace(/[^A-Z0-9_]/g, "");
+  document.getElementById("ptype-modal-title").textContent = "Add Position Type";
+  document.getElementById("ptype-edit-key").value = "";
+  document.getElementById("ptype-key").value = "";
+  document.getElementById("ptype-key").disabled = false;
+  document.getElementById("ptype-label").value = "";
+  document.getElementById("ptype-desc").value = "";
+  document.getElementById("ptype-suit").checked = false;
+  document.getElementById("ptype-suit-label").textContent = "No";
+  document.getElementById("ptype-male").checked = false;
+  document.getElementById("ptype-male-label").textContent = "No";
+  document.getElementById("ptype-modal").classList.add("active");
+  document.getElementById("ptype-key").focus();
+}
+
+function editPositionType(key) {
+  const pos = (CONSTANTS.positionTypes || {})[key] || {};
+  document.getElementById("ptype-modal-title").textContent = "Edit Position Type";
+  document.getElementById("ptype-edit-key").value = key;
+  document.getElementById("ptype-key").value = key;
+  document.getElementById("ptype-key").disabled = true;
+  document.getElementById("ptype-label").value = pos.label || "";
+  document.getElementById("ptype-desc").value = pos.description || "";
+  document.getElementById("ptype-suit").checked = !!pos.requiresSuit;
+  document.getElementById("ptype-suit-label").textContent = pos.requiresSuit ? "Yes" : "No";
+  document.getElementById("ptype-male").checked = !!pos.requiresMale;
+  document.getElementById("ptype-male-label").textContent = pos.requiresMale ? "Yes" : "No";
+  document.getElementById("ptype-modal").classList.add("active");
+  document.getElementById("ptype-label").focus();
+}
+
+function closePtypeModal() {
+  document.getElementById("ptype-modal").classList.remove("active");
+}
+
+async function savePtypeModal() {
+  const editKey = document.getElementById("ptype-edit-key").value;
+  const rawKey = document.getElementById("ptype-key").value.trim();
+  const label = document.getElementById("ptype-label").value.trim();
+  const desc = document.getElementById("ptype-desc").value.trim();
+  const requiresSuit = document.getElementById("ptype-suit").checked;
+  const requiresMale = document.getElementById("ptype-male").checked;
+
+  if (!rawKey) return toast("Key is required", "warning");
+  if (!label) return toast("Display name is required", "warning");
+
+  const cleanKey = rawKey.toUpperCase().replace(/[^A-Z0-9_]/g, "");
+  if (!cleanKey) return toast("Key must contain letters or numbers", "warning");
+
   const types = { ...(CONSTANTS.positionTypes || {}) };
-  types[cleanKey] = { label, description: desc, requiresSuit: needsSuit, requiresMale: maleOnly };
-  savePositionTypes(types);
+
+  if (!editKey && types[cleanKey]) return toast("A position type with this key already exists", "warning");
+
+  types[cleanKey] = { label, description: desc, requiresSuit, requiresMale };
+
+  const btn = document.querySelector("#ptype-modal .modal-footer .btn-primary");
+  setBtnLoading(btn, true);
+  try {
+    const result = await api("/settings/position-types", "PUT", { position_types: types });
+    if (result) {
+      CONSTANTS.positionTypes = types;
+      loadPositionTypesEditor();
+      loadPositionCountsEditor();
+      closePtypeModal();
+      toast(editKey ? "Position type updated" : "Position type added", "success");
+    }
+  } finally {
+    setBtnLoading(btn, false);
+  }
 }
 
 function removePositionType(key) {
-  if (!confirm(`Remove position type "${CONSTANTS.positionTypes[key]?.label || key}"?`)) return;
+  if (!confirm(`Remove position "${CONSTANTS.positionTypes[key]?.label || key}"? This cannot be undone.`)) return;
   const types = { ...(CONSTANTS.positionTypes || {}) };
   delete types[key];
-  savePositionTypes(types);
+  savePositionTypesQuiet(types);
 }
 
-async function savePositionTypes(types) {
+async function savePositionTypesQuiet(types) {
   const result = await api("/settings/position-types", "PUT", { position_types: types });
   if (result) {
     CONSTANTS.positionTypes = types;
     loadPositionTypesEditor();
     loadPositionCountsEditor();
-    toast("Position types updated", "success");
+    toast("Position type removed", "success");
   }
 }
 
