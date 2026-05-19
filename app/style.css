@@ -296,6 +296,9 @@ body {
     position: relative;
   }
 
+  .table-wrap table tr.expand-detail { display: none; }
+  .table-wrap table tr.expand-detail.active { display: block; }
+
   .table-wrap table tr:last-child { border-bottom: none; }
 
   .table-wrap table td {
@@ -1026,10 +1029,10 @@ tr:hover td { background: var(--gray-50); }
 .expandable-row td:first-child { position: relative; }
 
 .expand-arrow {
-  display: inline-block;
+  display: inline-flex;
   width: 12px;
+  height: 12px;
   margin-right: 0.35rem;
-  font-size: 0.7rem;
   transition: transform 0.15s;
   color: var(--gray-400);
 }

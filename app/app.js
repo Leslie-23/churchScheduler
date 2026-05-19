@@ -382,7 +382,7 @@ async function loadMembers() {
     <tr class="expandable-row" onclick="toggleMemberDetail('${m._id}', this)">
       <td data-label="">
         <div style="display:flex; align-items:center; gap:0.65rem">
-          <span class="expand-arrow">&#9654;</span>
+          <svg class="expand-arrow" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 2 7 5 3 8"/></svg>
           <div class="assignment-avatar">${getInitials(m.name)}</div>
           <strong>${esc(m.name)}</strong>
         </div>
