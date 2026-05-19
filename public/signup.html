@@ -24,6 +24,18 @@
           <input type="email" class="form-input" id="email" required autocomplete="email">
         </div>
         <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="tel" class="form-input" id="phone" placeholder="e.g. 0241234567" autocomplete="tel">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gender</label>
+          <select class="form-input" id="gender" required>
+            <option value="">Select</option>
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">Password</label>
           <input type="password" class="form-input" id="password" required minlength="6" autocomplete="new-password">
         </div>
@@ -73,6 +85,8 @@
           body: JSON.stringify({
             name: document.getElementById("name").value,
             email: document.getElementById("email").value,
+            phone: document.getElementById("phone").value,
+            gender: document.getElementById("gender").value,
             password,
           }),
         });

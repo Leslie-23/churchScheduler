@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema({
   password_hash: { type: String },
   google_id: { type: String, unique: true, sparse: true },
   phone: { type: String, trim: true, default: "" },
+  gender: { type: String, enum: ["M", "F", ""], default: "" },
   avatar: { type: String, default: "" },
   notification_preferences: {
     email: { type: Boolean, default: true },

@@ -44,6 +44,7 @@ app.use("/api/services", requireAuth, requireUnit, require("./routes/services"))
 app.use("/api/unavailability", requireAuth, requireUnit, require("./routes/unavailability"));
 app.use("/api/settings", requireAuth, requireUnit, require("./routes/settings"));
 app.use("/api/ai", requireAuth, requireUnit, require("./routes/ai"));
+app.use("/api/sms", requireAuth, requireUnit, require("./routes/sms"));
 
 // --- Serve protected app SPA ---
 app.use("/app", express.static(path.join(__dirname, "app")));
@@ -66,6 +67,8 @@ if (!process.env.VERCEL) {
       else console.log("Groq AI reporting: DISABLED (set GROQ_API_KEY to enable)");
       if (process.env.GOOGLE_CLIENT_ID) console.log("Google OAuth: ENABLED");
       else console.log("Google OAuth: DISABLED (set GOOGLE_CLIENT_ID to enable)");
+      if (process.env.ARKESEL_API_KEY) console.log("Arkesel SMS: ENABLED");
+      else console.log("Arkesel SMS: DISABLED (set ARKESEL_API_KEY to enable)");
     });
   });
 }

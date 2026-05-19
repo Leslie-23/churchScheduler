@@ -12,6 +12,7 @@ const pageTitles = {
   members: "Members",
   schedule: "Schedule",
   settings: "Settings",
+  sms: "SMS Notifications",
   reports: "AI Reports",
   profile: "Profile",
 };
@@ -153,6 +154,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadServices();
   if (activeRole !== "member") loadSettings();
   checkAIStatus();
+  if (activeRole !== "member") checkSMSStatus();
+
+  document.getElementById("sms-service").addEventListener("change", updateSMSPreview);
+  document.getElementById("sms-broadcast-msg").addEventListener("input", () => {
+    const len = document.getElementById("sms-broadcast-msg").value.length;
+    document.getElementById("sms-char-count").textContent = `${len} / 160 chars`;
+  });
 
   const today = new Date().toISOString().split("T")[0];
   document.getElementById("quick-date").value = today;
@@ -213,6 +221,7 @@ function showPage(page) {
   document.getElementById("page-title").textContent = pageTitles[page] || page;
   closeSidebar();
   if (page === "profile") loadProfile();
+  if (page === "sms") { checkSMSStatus(); }
 }
 
 function setupNav() {
@@ -639,8 +648,26 @@ async function viewSchedule(serviceId) {
     publishBtn.className = "btn btn-primary btn-sm";
   }
 
+  const notifyBtn = document.getElementById("btn-notify-sms");
+  if (notifyBtn) {
+    const smsStatus = await api("/sms/status").catch(() => null);
+    notifyBtn.style.display = smsStatus && smsStatus.enabled ? "" : "none";
+  }
+
   await loadAssignments(serviceId);
   detail.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function notifyCurrentService(btn) {
+  if (!currentServiceId) return;
+  if (!confirm("Send SMS notifications to all assigned members?")) return;
+  setBtnLoading(btn, true);
+  try {
+    const result = await api("/sms/notify-service", "POST", { service_id: currentServiceId });
+    if (result) toast(`${result.sent} notifications sent, ${result.skipped} skipped, ${result.failed} failed`, result.failed ? "warning" : "success");
+  } finally {
+    setBtnLoading(btn, false);
+  }
 }
 
 async function loadAssignments(serviceId) {
@@ -1101,6 +1128,102 @@ function renderAIHistory() {
       <div class="a">${esc(h.answer.substring(0, 120))}${h.answer.length > 120 ? "..." : ""}</div>
     </div>
   `).join("");
+}
+
+// --- SMS ---
+
+async function checkSMSStatus() {
+  try {
+    const data = await api("/sms/status");
+    if (!data) return;
+    document.getElementById("sms-enabled").style.display = data.enabled ? "" : "none";
+    document.getElementById("sms-disabled").style.display = data.enabled ? "none" : "";
+    document.getElementById("sms-broadcast-enabled").style.display = data.enabled ? "" : "none";
+    document.getElementById("sms-broadcast-disabled").style.display = data.enabled ? "none" : "";
+    if (data.enabled) loadSMSServices();
+  } catch {
+    document.getElementById("sms-disabled").style.display = "";
+    document.getElementById("sms-broadcast-disabled").style.display = "";
+  }
+}
+
+async function loadSMSServices() {
+  const services = await api("/services?upcoming=true");
+  if (!services) return;
+  const sel = document.getElementById("sms-service");
+  if (services.length === 0) {
+    sel.innerHTML = '<option value="">No upcoming services</option>';
+    return;
+  }
+  sel.innerHTML = services.map((s) =>
+    `<option value="${s._id}">${formatDate(s.date)} — ${CONSTANTS.serviceTypes[s.service_type] || s.service_type}${s.name ? " — " + esc(s.name) : ""}</option>`
+  ).join("");
+  updateSMSPreview();
+}
+
+function updateSMSPreview() {
+  const sel = document.getElementById("sms-service");
+  const preview = document.getElementById("sms-preview");
+  if (!sel.value) { preview.style.display = "none"; return; }
+  const opt = sel.options[sel.selectedIndex];
+  preview.style.display = "";
+  document.getElementById("sms-preview-text").textContent =
+    `Hi [Name], you will be serving at [Position] on ${opt.textContent.split(" — ")[0]}. Ensure to be on time for our unit prayers. God bless!`;
+}
+
+async function sendDutyNotifications(btn) {
+  const serviceId = document.getElementById("sms-service").value;
+  if (!serviceId) return toast("Select a service", "warning");
+  if (!confirm("Send SMS to all assigned members for this service?")) return;
+
+  setBtnLoading(btn, true);
+  const resultDiv = document.getElementById("sms-duty-result");
+  resultDiv.innerHTML = '<div class="loading-spinner">Sending messages...</div>';
+
+  try {
+    const result = await api("/sms/notify-service", "POST", { service_id: serviceId });
+    if (!result) { resultDiv.innerHTML = ""; return; }
+
+    let html = `<div class="alert alert-success" style="margin-bottom:0.5rem">Sent: ${result.sent} &middot; Skipped: ${result.skipped} &middot; Failed: ${result.failed}</div>`;
+    if (result.details && result.details.length) {
+      html += '<div style="font-size:0.78rem; max-height:200px; overflow-y:auto">';
+      for (const d of result.details) {
+        const color = d.status === "sent" ? "var(--green)" : d.status === "skipped" ? "var(--yellow)" : "var(--red)";
+        html += `<div style="padding:0.25rem 0; border-bottom:1px solid var(--gray-200); color:${color}"><strong>${esc(d.name)}</strong> — ${d.status}${d.reason ? " (" + esc(d.reason) + ")" : ""}</div>`;
+      }
+      html += "</div>";
+    }
+    resultDiv.innerHTML = html;
+    toast(`${result.sent} notifications sent`, "success");
+  } finally {
+    setBtnLoading(btn, false);
+  }
+}
+
+async function sendBroadcast(btn) {
+  const message = document.getElementById("sms-broadcast-msg").value.trim();
+  if (!message) return toast("Write a message first", "warning");
+  if (!confirm(`Send this message to all active members?\n\n"${message.substring(0, 100)}${message.length > 100 ? "..." : ""}"`)) return;
+
+  setBtnLoading(btn, true);
+  const resultDiv = document.getElementById("sms-broadcast-result");
+  resultDiv.innerHTML = '<div class="loading-spinner">Sending...</div>';
+
+  try {
+    const result = await api("/sms/broadcast", "POST", { message });
+    if (!result) { resultDiv.innerHTML = ""; return; }
+
+    let html = `<div class="alert alert-success">Sent to ${result.sent} members`;
+    if (result.skipped > 0) html += ` &middot; ${result.skipped} skipped (no phone)`;
+    html += "</div>";
+    if (result.skipped_names && result.skipped_names.length) {
+      html += `<div style="font-size:0.72rem; color:var(--yellow); margin-top:0.25rem">No phone: ${result.skipped_names.join(", ")}</div>`;
+    }
+    resultDiv.innerHTML = html;
+    toast(`Broadcast sent to ${result.sent} members`, "success");
+  } finally {
+    setBtnLoading(btn, false);
+  }
 }
 
 // --- Profile ---

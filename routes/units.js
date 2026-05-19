@@ -19,7 +19,18 @@ router.post("/", async (req, res) => {
   if (!name) return res.status(400).json({ error: "Unit name is required" });
 
   const unit = await Unit.create({ name, description, created_by: req.user._id });
-  await UnitMembership.create({ user: req.user._id, unit: unit._id, role: "owner" });
+
+  const user = req.user;
+  const member = await Member.create({
+    unit: unit._id,
+    name: user.name,
+    gender: user.gender || "M",
+    has_suit: false,
+    phone: user.phone || "",
+    skills: [],
+  });
+
+  await UnitMembership.create({ user: req.user._id, unit: unit._id, role: "owner", member: member._id });
   await seedPositionCounts(unit._id);
 
   res.status(201).json({
@@ -41,7 +52,23 @@ router.post("/join", async (req, res) => {
   const existing = await UnitMembership.findOne({ user: req.user._id, unit: unit._id });
   if (existing) return res.status(409).json({ error: "Already a member of this unit" });
 
-  await UnitMembership.create({ user: req.user._id, unit: unit._id, role: "member" });
+  const user = req.user;
+  const member = await Member.create({
+    unit: unit._id,
+    name: user.name,
+    gender: user.gender || "M",
+    has_suit: false,
+    phone: user.phone || "",
+    notes: "Joined via invite code",
+    skills: [],
+  });
+
+  await UnitMembership.create({
+    user: req.user._id,
+    unit: unit._id,
+    role: "member",
+    member: member._id,
+  });
 
   res.json({
     _id: unit._id,

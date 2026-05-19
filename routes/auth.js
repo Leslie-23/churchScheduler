@@ -4,7 +4,7 @@ const { hashPassword, comparePassword, generateToken } = require("../auth");
 const { requireAuth } = require("../middleware");
 
 router.post("/signup", async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, phone, gender } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: "Name, email, and password are required" });
   if (password.length < 6) return res.status(400).json({ error: "Password must be at least 6 characters" });
 
@@ -12,7 +12,13 @@ router.post("/signup", async (req, res) => {
   if (existing) return res.status(409).json({ error: "Email already registered" });
 
   const password_hash = await hashPassword(password);
-  const user = await User.create({ name, email: email.toLowerCase(), password_hash });
+  const user = await User.create({
+    name,
+    email: email.toLowerCase(),
+    password_hash,
+    phone: phone || "",
+    gender: gender || "",
+  });
   const token = generateToken(user._id);
 
   res.status(201).json({
