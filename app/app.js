@@ -1930,16 +1930,18 @@ async function loadUnitMembers() {
     if (m.role === "owner") {
       controls = '<span class="badge badge-active">Owner</span>';
     } else if (canManageRoles && !isSelf) {
-      const canChangeRole = isOwner || (activeRole === "admin" && m.role !== "admin");
-      controls = `
-        ${canChangeRole ? `
+      const canManageThis = isOwner || (activeRole === "admin" && m.role !== "admin");
+      if (canManageThis) {
+        controls = `
           <select class="form-select" style="font-size:0.75rem; padding:0.2rem 0.4rem; width:auto" onchange="changeRole('${m._id}', this.value)">
             <option value="admin" ${m.role === "admin" ? "selected" : ""}>Admin</option>
             <option value="member" ${m.role === "member" ? "selected" : ""}>Member</option>
           </select>
-        ` : `<span class="badge">${m.role}</span>`}
-        <button class="btn btn-danger btn-sm" onclick="removeUnitMember('${m._id}', '${esc(m.user.name)}')">Remove</button>
-      `;
+          <button class="btn btn-danger btn-sm" onclick="removeUnitMember('${m._id}', '${esc(m.user.name)}')">Remove</button>
+        `;
+      } else {
+        controls = `<span class="badge">${m.role}</span>`;
+      }
     } else {
       controls = `<span class="badge">${m.role}</span>`;
     }

@@ -240,6 +240,9 @@ router.delete("/:id/members/:membershipId", requireUnit, requireRole("owner", "a
   const membership = await UnitMembership.findById(req.params.membershipId);
   if (!membership) return res.status(404).json({ error: "Membership not found" });
   if (membership.role === "owner") return res.status(400).json({ error: "Cannot remove owner" });
+  if (req.membership.role === "admin" && membership.role === "admin") {
+    return res.status(403).json({ error: "Admins cannot remove other admins" });
+  }
   await membership.deleteOne();
   res.json({ success: true });
 });
