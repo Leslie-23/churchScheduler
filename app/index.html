@@ -484,16 +484,21 @@
             <button class="btn btn-primary" onclick="changePassword()">Change Password</button>
           </div>
         </div>
-        <div class="card" id="unit-admin-card" style="display:none" data-min-role="owner">
+        <div class="card" id="unit-admin-card" style="display:none">
           <div class="card-header"><h3>Unit Management</h3></div>
           <div class="card-body">
-            <div class="form-group">
+            <div class="form-group" id="invite-code-section">
               <label class="form-label">Invite Code</label>
               <div style="display:flex; gap:0.5rem; align-items:center">
                 <code id="unit-invite-code" style="font-size:1.1rem; letter-spacing:0.15em; font-weight:700"></code>
                 <button class="btn btn-ghost btn-sm" onclick="copyInviteCode()">Copy</button>
                 <button class="btn btn-ghost btn-sm" onclick="regenerateInvite()">Regenerate</button>
               </div>
+            </div>
+            <div id="join-requests-section" style="display:none">
+              <hr class="divider">
+              <label class="form-label">Pending Join Requests</label>
+              <div id="join-requests-list"></div>
             </div>
             <hr class="divider">
             <label class="form-label">Unit Members</label>

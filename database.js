@@ -101,6 +101,13 @@ const unavailabilitySchema = new mongoose.Schema({
 });
 unavailabilitySchema.index({ member: 1, date: 1 }, { unique: true });
 
+const joinRequestSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  unit: { type: mongoose.Schema.Types.ObjectId, ref: "Unit", required: true },
+  status: { type: String, enum: ["pending", "approved", "denied"], default: "pending" },
+}, { timestamps: true });
+joinRequestSchema.index({ user: 1, unit: 1, status: 1 });
+
 const positionCountSchema = new mongoose.Schema({
   unit: { type: mongoose.Schema.Types.ObjectId, ref: "Unit", required: true },
   service_type: { type: String, required: true },
@@ -118,6 +125,7 @@ const Member = mongoose.model("Member", memberSchema);
 const Service = mongoose.model("Service", serviceSchema);
 const Assignment = mongoose.model("Assignment", assignmentSchema);
 const Unavailability = mongoose.model("Unavailability", unavailabilitySchema);
+const JoinRequest = mongoose.model("JoinRequest", joinRequestSchema);
 const PositionCount = mongoose.model("PositionCount", positionCountSchema);
 
 // --- Init ---
@@ -146,7 +154,9 @@ async function seedPositionCounts(unitId) {
     }
   }
   if (defaults.length > 0) {
-    await PositionCount.insertMany(defaults);
+    await PositionCount.insertMany(defaults, { ordered: false }).catch((err) => {
+      if (err.code !== 11000) throw err;
+    });
   }
 }
 
@@ -162,6 +172,7 @@ module.exports = {
   Service,
   Assignment,
   Unavailability,
+  JoinRequest,
   PositionCount,
   DEFAULT_POSITION_TYPES,
   DEFAULT_SERVICE_TYPES,

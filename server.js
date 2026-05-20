@@ -26,8 +26,7 @@ if (process.env.GOOGLE_CLIENT_ID) {
     passport.authenticate("google", { session: false, failureRedirect: "/login.html" }),
     (req, res) => {
       const token = generateToken(req.user.user._id);
-      const dest = req.user.hasUnits ? "/app" : "/onboarding.html";
-      res.redirect(`/auth-callback.html?token=${token}&redirect=${dest}`);
+      res.redirect(`/auth-callback.html?token=${token}&redirect=/app`);
     }
   );
 }
@@ -68,8 +67,6 @@ app.get("/app/*", (_req, res) => {
 });
 
 // --- Start ---
-connectDb();
-
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
   connectDb().then(() => {

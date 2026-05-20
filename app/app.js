@@ -81,7 +81,7 @@ function getActiveUnitId() {
 async function api(path, method = "GET", body = null) {
   const token = getToken();
   if (!token) {
-    window.location.href = "/login.html";
+    window.location.replace("/login.html");
     return;
   }
   const headers = {
@@ -94,15 +94,26 @@ async function api(path, method = "GET", body = null) {
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
 
-  const res = await fetch("/api" + path, opts);
+  let res;
+  try {
+    res = await fetch("/api" + path, opts);
+  } catch {
+    toast("Network error. Check your connection.", "error");
+    return null;
+  }
   if (res.status === 401) {
     localStorage.removeItem("auth_token");
-    window.location.href = "/login.html";
+    window.location.replace("/login.html");
     return;
   }
   if (res.status === 403) {
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     toast(data.error || "You don't have permission for this action.", "error");
+    return null;
+  }
+  if (res.status === 409) {
+    const data = await res.json().catch(() => ({}));
+    toast(data.error || "Conflict — this action was already performed.", "warning");
     return null;
   }
   if (!res.ok) {
@@ -120,6 +131,181 @@ function dismissSplash() {
   setTimeout(() => splash.classList.add("hidden"), 400);
 }
 
+function showErrorPage(message) {
+  document.querySelector(".sidebar").style.display = "none";
+  document.querySelector(".topbar").style.display = "none";
+  const content = document.querySelector(".content");
+  content.style.maxWidth = "480px";
+  content.style.margin = "0 auto";
+  content.style.padding = "4rem 1.5rem";
+  content.style.textAlign = "center";
+  content.innerHTML = `
+    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:1rem">
+      <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
+    <h2 style="font-family:var(--font-display);font-size:1.5rem;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.5rem">Something Went Wrong</h2>
+    <p style="color:var(--stone-500);font-size:0.88rem;margin-bottom:1.5rem">${esc(message)}</p>
+    <div class="btn-group" style="justify-content:center;gap:0.75rem">
+      <button class="btn btn-primary" onclick="window.location.reload()">Try Again</button>
+      <button class="btn btn-ghost" onclick="logout()">Log Out</button>
+    </div>
+  `;
+}
+
+function showNoUnitsPage() {
+  document.querySelector(".sidebar").style.display = "none";
+  document.querySelector(".topbar").style.display = "none";
+  const content = document.querySelector(".content");
+  content.style.maxWidth = "520px";
+  content.style.margin = "0 auto";
+  content.style.padding = "3rem 1.5rem";
+  content.innerHTML = `
+    <div style="text-align:center; margin-bottom:2rem">
+      <svg viewBox="0 0 40 40" width="48" height="48" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round">
+        <g transform="rotate(-15 20 20)"><line x1="20" y1="4" x2="20" y2="36"/><line x1="10" y1="14" x2="30" y2="14"/></g>
+      </svg>
+      <h2 style="font-family:var(--font-display);font-size:2rem;letter-spacing:0.06em;text-transform:uppercase;margin-top:0.75rem">Get Started</h2>
+      <p style="color:var(--stone-500);font-size:0.88rem;margin-top:0.3rem">Create a new unit, browse existing ones, or join with a code.</p>
+    </div>
+    <div id="onb-pending-requests" style="display:none; margin-bottom:1.25rem"></div>
+    <div class="card" style="margin-bottom:1.25rem">
+      <div class="card-header"><h3>Find a Unit</h3></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Search Units</label>
+          <div class="search-select">
+            <input type="text" class="form-input" id="onb-unit-search" placeholder="Search by name..." autocomplete="off" oninput="onbSearchUnits()">
+            <div class="search-dropdown" id="onb-unit-dropdown"></div>
+          </div>
+        </div>
+        <p style="font-size:0.78rem; color:var(--stone-400); margin-top:-0.5rem">Search for your unit and request to join. An admin will approve your request.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:1.25rem">
+      <div class="card-header"><h3>Have an Invite Code?</h3></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Invite Code</label>
+          <input type="text" class="form-input" id="onb-invite-code" placeholder="e.g. a1b2c3d4" style="text-transform:lowercase;letter-spacing:0.15em;font-weight:700">
+        </div>
+        <button class="btn btn-primary" onclick="onbJoinUnit()" style="width:100%">Join Unit</button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:2rem">
+      <div class="card-header"><h3>Create a New Unit</h3></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Unit Name</label>
+          <input type="text" class="form-input" id="onb-unit-name" placeholder="e.g. Ushering Team, Media Unit">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description (optional)</label>
+          <input type="text" class="form-input" id="onb-unit-desc" placeholder="e.g. Handles Sunday & midweek scheduling">
+        </div>
+        <button class="btn btn-primary" onclick="onbCreateUnit()" style="width:100%">Create Unit</button>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <button class="btn btn-ghost" onclick="logout()">Log Out</button>
+    </div>
+  `;
+  onbLoadPendingRequests();
+}
+
+let _onbSearchTimer = null;
+async function onbSearchUnits() {
+  clearTimeout(_onbSearchTimer);
+  const q = document.getElementById("onb-unit-search").value.trim();
+  const dropdown = document.getElementById("onb-unit-dropdown");
+  if (q.length < 2) { dropdown.classList.remove("active"); return; }
+  _onbSearchTimer = setTimeout(async () => {
+    const units = await api(`/units/discover?q=${encodeURIComponent(q)}`);
+    if (!units) return;
+    if (units.length === 0) {
+      dropdown.innerHTML = '<div class="search-no-results">No units found</div>';
+      dropdown.classList.add("active");
+      return;
+    }
+    dropdown.innerHTML = units.map((u) => `
+      <div class="search-option" style="justify-content:space-between">
+        <div>
+          <strong>${esc(u.name)}</strong>
+          ${u.description ? `<div style="font-size:0.72rem;color:var(--stone-400)">${esc(u.description)}</div>` : ""}
+        </div>
+        ${u.is_member ? '<span class="badge badge-active" style="font-size:0.6rem">Joined</span>'
+          : u.has_pending_request ? '<span class="badge badge-draft" style="font-size:0.6rem">Pending</span>'
+          : `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();onbRequestJoin('${u._id}','${esc(u.name)}')">Request</button>`}
+      </div>
+    `).join("");
+    dropdown.classList.add("active");
+  }, 300);
+}
+
+async function onbRequestJoin(unitId, unitName) {
+  const result = await api("/units/request-join", "POST", { unit_id: unitId });
+  if (result) {
+    toast(`Request sent to join "${unitName}". An admin will review it.`, "success");
+    onbSearchUnits();
+    onbLoadPendingRequests();
+  }
+}
+
+async function onbLoadPendingRequests() {
+  const requests = await api("/units/my-requests");
+  if (!requests) return;
+  const pending = requests.filter((r) => r.status === "pending");
+  const denied = requests.filter((r) => r.status === "denied");
+  const container = document.getElementById("onb-pending-requests");
+  if (pending.length === 0 && denied.length === 0) { container.style.display = "none"; return; }
+  container.style.display = "";
+  container.innerHTML = `
+    <div class="card">
+      <div class="card-header"><h3>Your Requests</h3></div>
+      <div class="card-body">
+        ${pending.map((r) => `
+          <div class="follow-up-item">
+            <div>
+              <strong>${esc(r.unit.name)}</strong>
+              <div style="font-size:0.72rem; color:var(--stone-400)">Requested ${new Date(r.createdAt).toLocaleDateString()}</div>
+            </div>
+            <span class="badge badge-draft">Pending</span>
+          </div>
+        `).join("")}
+        ${denied.map((r) => `
+          <div class="follow-up-item">
+            <div>
+              <strong>${esc(r.unit.name)}</strong>
+              <div style="font-size:0.72rem; color:var(--stone-400)">Requested ${new Date(r.createdAt).toLocaleDateString()}</div>
+            </div>
+            <span class="badge badge-absent">Denied</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+async function onbCreateUnit() {
+  const name = document.getElementById("onb-unit-name").value.trim();
+  if (!name) return toast("Unit name is required", "warning");
+  const desc = document.getElementById("onb-unit-desc").value.trim();
+  const result = await api("/units", "POST", { name, description: desc });
+  if (result) {
+    localStorage.setItem("active_unit_id", result._id);
+    window.location.reload();
+  }
+}
+
+async function onbJoinUnit() {
+  const code = document.getElementById("onb-invite-code").value.trim();
+  if (!code) return toast("Enter an invite code", "warning");
+  const result = await api("/units/join", "POST", { invite_code: code });
+  if (result) {
+    localStorage.setItem("active_unit_id", result._id);
+    window.location.reload();
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   const splashStart = Date.now();
 
@@ -130,13 +316,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const meData = await api("/auth/me");
-  if (!meData) return;
+  if (!meData) {
+    dismissSplash();
+    if (getToken()) showErrorPage("Could not load your account. Check your connection and try again.");
+    return;
+  }
 
   currentUser = meData.user;
   currentMemberships = meData.memberships;
 
   if (currentMemberships.length === 0) {
-    window.location.replace("/onboarding.html");
+    showNoUnitsPage();
+    const elapsed = Date.now() - splashStart;
+    setTimeout(dismissSplash, Math.max(1500 - elapsed, 0));
     return;
   }
 
@@ -326,7 +518,25 @@ async function loadDashboard() {
 
   if (activeRole === "owner" || activeRole === "admin") {
     loadFollowUp();
+    loadDashboardJoinRequests();
   }
+}
+
+async function loadDashboardJoinRequests() {
+  const requests = await api(`/units/${activeUnitId}/join-requests`);
+  if (!requests || requests.length === 0) return;
+  const card = document.getElementById("followup-card");
+  const list = document.getElementById("followup-list");
+  const alert = document.createElement("div");
+  alert.className = "alert alert-warning";
+  alert.style.cursor = "pointer";
+  alert.onclick = () => showPage("profile");
+  alert.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+    <span><strong>${requests.length}</strong> pending join request${requests.length > 1 ? "s" : ""} — tap to review</span>
+  `;
+  card.style.display = "block";
+  card.querySelector(".card-body").prepend(alert);
 }
 
 async function loadFollowUp() {
@@ -1119,6 +1329,9 @@ document.addEventListener("click", (e) => {
   if (!e.target.closest("#swap-member-search")) {
     document.getElementById("swap-member-dropdown")?.classList.remove("active");
   }
+  if (!e.target.closest(".search-select")) {
+    document.getElementById("onb-unit-dropdown")?.classList.remove("active");
+  }
 });
 
 async function removeAssignment(id) {
@@ -1638,10 +1851,13 @@ async function loadProfile() {
 
   const adminCard = document.getElementById("unit-admin-card");
   const currentMembership = meData.memberships.find((m) => m.unit._id === activeUnitId);
-  if (currentMembership && currentMembership.role === "owner") {
+  if (currentMembership && (currentMembership.role === "owner" || currentMembership.role === "admin")) {
     adminCard.style.display = "";
+    const isOwner = currentMembership.role === "owner";
+    document.getElementById("invite-code-section").style.display = isOwner ? "" : "none";
     document.getElementById("unit-invite-code").textContent = currentMembership.unit.invite_code || "";
     loadUnitMembers();
+    loadJoinRequests();
   } else {
     adminCard.style.display = "none";
   }
@@ -1705,33 +1921,84 @@ async function loadUnitMembers() {
   const members = await api(`/units/${activeUnitId}/members`);
   if (!members) return;
   const container = document.getElementById("unit-members-list");
-  container.innerHTML = members.map((m) => `
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid var(--gray-200)">
-      <div>
-        <strong>${esc(m.user.name)}</strong>
-        <span style="color:var(--gray-400); font-size:0.78rem; margin-left:0.3rem">${esc(m.user.email)}</span>
-      </div>
-      <div class="btn-group">
-        ${m.role !== "owner" ? `
+  const canManageRoles = activeRole === "owner" || activeRole === "admin";
+  const isOwner = activeRole === "owner";
+
+  container.innerHTML = members.map((m) => {
+    const isSelf = m.user._id === currentUser._id;
+    let controls = "";
+    if (m.role === "owner") {
+      controls = '<span class="badge badge-active">Owner</span>';
+    } else if (canManageRoles && !isSelf) {
+      const canChangeRole = isOwner || (activeRole === "admin" && m.role !== "admin");
+      controls = `
+        ${canChangeRole ? `
           <select class="form-select" style="font-size:0.75rem; padding:0.2rem 0.4rem; width:auto" onchange="changeRole('${m._id}', this.value)">
             <option value="admin" ${m.role === "admin" ? "selected" : ""}>Admin</option>
             <option value="member" ${m.role === "member" ? "selected" : ""}>Member</option>
           </select>
-          <button class="btn btn-danger btn-sm" onclick="removeUnitMember('${m._id}', '${esc(m.user.name)}')">Remove</button>
-        ` : '<span class="badge">Owner</span>'}
+        ` : `<span class="badge">${m.role}</span>`}
+        <button class="btn btn-danger btn-sm" onclick="removeUnitMember('${m._id}', '${esc(m.user.name)}')">Remove</button>
+      `;
+    } else {
+      controls = `<span class="badge">${m.role}</span>`;
+    }
+
+    return `
+      <div class="settings-type-item">
+        <div style="min-width:0">
+          <strong style="display:block">${esc(m.user.name)}</strong>
+          <span style="color:var(--stone-400); font-size:0.72rem">${esc(m.user.email)}</span>
+        </div>
+        <div class="btn-group" style="flex-shrink:0">${controls}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function loadJoinRequests() {
+  const requests = await api(`/units/${activeUnitId}/join-requests`);
+  if (!requests) return;
+  const section = document.getElementById("join-requests-section");
+  const container = document.getElementById("join-requests-list");
+  if (requests.length === 0) {
+    section.style.display = "none";
+    return;
+  }
+  section.style.display = "";
+  container.innerHTML = requests.map((r) => `
+    <div class="settings-type-item">
+      <div style="min-width:0">
+        <strong style="display:block">${esc(r.user.name)}</strong>
+        <span style="color:var(--stone-400); font-size:0.72rem">${esc(r.user.email)}</span>
+      </div>
+      <div class="btn-group" style="flex-shrink:0">
+        <button class="btn btn-success btn-sm" onclick="handleJoinRequest('${r._id}','approve','${esc(r.user.name)}')">Approve</button>
+        <button class="btn btn-danger btn-sm" onclick="handleJoinRequest('${r._id}','deny','${esc(r.user.name)}')">Deny</button>
       </div>
     </div>
   `).join("");
 }
 
+async function handleJoinRequest(requestId, action, name) {
+  const result = await api(`/units/${activeUnitId}/join-requests/${requestId}`, "PUT", { action });
+  if (result) {
+    toast(`${name} ${action === "approve" ? "approved" : "denied"}`, action === "approve" ? "success" : "info");
+    loadJoinRequests();
+    if (action === "approve") loadUnitMembers();
+  }
+}
+
 async function changeRole(membershipId, role) {
-  await api(`/units/${activeUnitId}/members/${membershipId}/role`, "PUT", { role });
+  const result = await api(`/units/${activeUnitId}/members/${membershipId}/role`, "PUT", { role });
+  if (result) toast("Role updated", "success");
+  else loadUnitMembers();
 }
 
 async function removeUnitMember(membershipId, name) {
   if (!confirm(`Remove ${name} from this unit?`)) return;
   const result = await api(`/units/${activeUnitId}/members/${membershipId}`, "DELETE");
-  if (result) toast(`${name} removed from unit`, "success");
+  if (result) toast(`${name} removed`, "success");
   loadUnitMembers();
 }
 

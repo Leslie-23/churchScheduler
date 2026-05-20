@@ -107,19 +107,20 @@ body.body-locked {
   display: none;
   width: 40px;
   height: 40px;
-  border: 1.5px solid var(--black);
+  border: 1.5px solid var(--accent);
   background: var(--white);
+  color: var(--accent);
   cursor: pointer;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   padding: 0;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
   touch-action: manipulation;
 }
 
 .hamburger svg { width: 20px; height: 20px; }
-.hamburger:hover { background: var(--black); color: var(--white); }
+.hamburger:hover { background: var(--accent); color: var(--white); border-color: var(--accent); }
 
 /* ===== SIDEBAR OVERLAY ===== */
 .sidebar-overlay {

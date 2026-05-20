@@ -31,12 +31,7 @@ async function redirectAfterAuth(token) {
       localStorage.removeItem("auth_token");
       return;
     }
-    const data = await res.json();
-    if (data.memberships && data.memberships.length > 0) {
-      window.location.href = "/app";
-    } else {
-      window.location.href = "/onboarding.html";
-    }
+    window.location.href = "/app";
   } catch {
     localStorage.removeItem("auth_token");
   }

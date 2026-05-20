@@ -10,7 +10,13 @@
       "Bash(npm install *)",
       "PowerShell($token = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2YTBiZjUwNGRkODYwZGE3YjE3N2I3OWEiLCJpYXQiOjE3NzkxNjg1NjksImV4cCI6MTc3OTc3MzM2OX0.ttbAz4u33tqofI_KsSBCiI3pBr1R0k4ehkYyqdpZubE\"; $r = Invoke-WebRequest -Uri \"http://localhost:3000/api/auth/me\" -Method GET -Headers @{\"Authorization\"=\"Bearer $token\"} -UseBasicParsing; $r.Content)",
       "Bash(git commit *)",
-      "PowerShell(node C:\\\\Users\\\\Administrator\\\\churchscheduler\\\\generate-icons.js)"
+      "PowerShell(node C:\\\\Users\\\\Administrator\\\\churchscheduler\\\\generate-icons.js)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "PowerShell(try { $tcp = New-Object System.Net.Sockets.TcpClient; $tcp.Connect\\(\"127.0.0.1\", 27017\\); Write-Output \"MongoDB is listening on 27017\"; $tcp.Close\\(\\) } catch { Write-Output \"MongoDB NOT available on 27017: $\\($_.Exception.Message\\)\" })",
+      "Bash(curl *)",
+      "Bash(export MONGO_URI=\"mongodb://127.0.0.1:27017/churchscheduler\")",
+      "Bash(node -e ' *)",
+      "Bash(echo \"PID: $!\")"
     ]
   }
 }
