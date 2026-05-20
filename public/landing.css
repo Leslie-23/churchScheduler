@@ -21,11 +21,17 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: 'Barlow', sans-serif;
   background: var(--white);
   color: var(--black);
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 h1, h2, h3, h4 {
@@ -436,6 +442,7 @@ a { color: var(--black); }
 /* --- AUTH PAGES --- */
 .auth-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -486,6 +493,10 @@ a { color: var(--black); }
 }
 
 .form-input:focus { border-color: var(--accent); }
+
+@media (max-width: 768px) {
+  .form-input { font-size: 16px; }
+}
 
 .auth-btn {
   width: 100%;
@@ -569,6 +580,7 @@ a { color: var(--black); }
 /* --- ONBOARDING --- */
 .onboarding-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -645,11 +657,18 @@ a { color: var(--black); }
   .features, .how-it-works, .problem-section, .who-section, .cta-section { padding: 3.5rem 1.5rem; }
   .landing-nav { padding: 1rem; }
   .landing-nav .logo { font-size: 1.2rem; }
+  .auth-page { padding: 1.5rem; padding-top: calc(1.5rem + env(safe-area-inset-top, 0px)); }
   .auth-card, .onboarding-card { padding: 2rem 1.5rem; }
   .choice-grid { grid-template-columns: 1fr; }
   .who-grid { grid-template-columns: 1fr; }
   .features-grid { grid-template-columns: 1fr; }
   .features h2, .how-it-works h2, .problem-section h2, .who-section h2, .cta-section h2 { font-size: 2rem; }
+  .btn { padding: 0.75rem 1.5rem; min-height: 44px; touch-action: manipulation; }
+  .auth-btn { min-height: 48px; font-size: 16px; touch-action: manipulation; }
+  .google-btn { min-height: 48px; touch-action: manipulation; }
+  .stat-block { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .cta-group { flex-direction: column; align-items: center; }
+  .cta-group .btn { width: 100%; text-align: center; }
 }
 
 .small-letter-s {

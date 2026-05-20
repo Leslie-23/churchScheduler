@@ -495,10 +495,12 @@ function openMemberModal() {
   document.getElementById("m-notes").value = "";
   renderSkillInputs({});
   document.getElementById("member-modal").classList.add("active");
+  document.body.classList.add("body-locked");
 }
 
 function closeMemberModal() {
   document.getElementById("member-modal").classList.remove("active");
+  document.body.classList.remove("body-locked");
 }
 
 async function editMember(id) {
@@ -521,6 +523,7 @@ async function editMember(id) {
   renderSkillInputs(skillMap);
 
   document.getElementById("member-modal").classList.add("active");
+  document.body.classList.add("body-locked");
 }
 
 function renderSkillInputs(skillMap) {
@@ -662,8 +665,8 @@ async function loadServices() {
     .join("");
 }
 
-function openServiceModal() { document.getElementById("service-modal").classList.add("active"); }
-function closeServiceModal() { document.getElementById("service-modal").classList.remove("active"); }
+function openServiceModal() { document.getElementById("service-modal").classList.add("active"); document.body.classList.add("body-locked"); }
+function closeServiceModal() { document.getElementById("service-modal").classList.remove("active"); document.body.classList.remove("body-locked"); }
 
 async function saveService() {
   const data = {
@@ -935,6 +938,7 @@ async function openReplaceModal(assignmentId, positionType, memberId, memberName
   document.getElementById("replace-suggestions").innerHTML = '<div class="loading-spinner">Finding best replacements...</div>';
   document.getElementById("btn-confirm-replace").disabled = true;
   document.getElementById("replace-modal").classList.add("active");
+  document.body.classList.add("body-locked");
 
   const result = await api(`/services/${currentServiceId}/suggest-replacement`, "POST", {
     position_type: positionType,
@@ -1006,6 +1010,7 @@ async function confirmReplace() {
 
 function closeReplaceModal() {
   document.getElementById("replace-modal").classList.remove("active");
+  document.body.classList.remove("body-locked");
   replaceState = {};
 }
 
@@ -1029,6 +1034,7 @@ async function openSwapModal(assignmentId, positionType, currentMemberId) {
   renderSwapDropdown(swapMembersList, currentMemberId);
 
   document.getElementById("swap-modal").classList.add("active");
+  document.body.classList.add("body-locked");
 }
 
 function renderSwapDropdown(list, selectedId) {
@@ -1074,6 +1080,7 @@ function selectSwapMember(id, name) {
 function closeSwapModal() {
   document.getElementById("swap-modal").classList.remove("active");
   document.getElementById("swap-member-dropdown").classList.remove("active");
+  document.body.classList.remove("body-locked");
 }
 
 async function saveSwap() {
@@ -1242,6 +1249,7 @@ function addServiceType() {
   document.getElementById("stype-key").disabled = false;
   document.getElementById("stype-label").value = "";
   document.getElementById("stype-modal").classList.add("active");
+  document.body.classList.add("body-locked");
   document.getElementById("stype-key").focus();
 }
 
@@ -1253,11 +1261,13 @@ function editServiceType(key) {
   document.getElementById("stype-key").disabled = true;
   document.getElementById("stype-label").value = label;
   document.getElementById("stype-modal").classList.add("active");
+  document.body.classList.add("body-locked");
   document.getElementById("stype-label").focus();
 }
 
 function closeStypeModal() {
   document.getElementById("stype-modal").classList.remove("active");
+  document.body.classList.remove("body-locked");
 }
 
 async function saveStypeModal() {
@@ -1326,6 +1336,7 @@ function addPositionType() {
   document.getElementById("ptype-male").checked = false;
   document.getElementById("ptype-male-label").textContent = "No";
   document.getElementById("ptype-modal").classList.add("active");
+  document.body.classList.add("body-locked");
   document.getElementById("ptype-key").focus();
 }
 
@@ -1342,11 +1353,13 @@ function editPositionType(key) {
   document.getElementById("ptype-male").checked = !!pos.requiresMale;
   document.getElementById("ptype-male-label").textContent = pos.requiresMale ? "Yes" : "No";
   document.getElementById("ptype-modal").classList.add("active");
+  document.body.classList.add("body-locked");
   document.getElementById("ptype-label").focus();
 }
 
 function closePtypeModal() {
   document.getElementById("ptype-modal").classList.remove("active");
+  document.body.classList.remove("body-locked");
 }
 
 async function savePtypeModal() {
@@ -1742,11 +1755,13 @@ function esc(str) {
 // --- Sidebar ---
 
 function toggleSidebar() {
-  document.querySelector(".sidebar").classList.toggle("open");
+  const open = document.querySelector(".sidebar").classList.toggle("open");
   document.getElementById("sidebar-overlay").classList.toggle("active");
+  document.body.classList.toggle("body-locked", open);
 }
 
 function closeSidebar() {
   document.querySelector(".sidebar").classList.remove("open");
   document.getElementById("sidebar-overlay").classList.remove("active");
+  document.body.classList.remove("body-locked");
 }
