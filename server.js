@@ -22,13 +22,19 @@ app.use("/api/auth", require("./routes/auth"));
 if (process.env.GOOGLE_CLIENT_ID) {
   app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"], session: false }));
 
-  app.get("/auth/google/callback",
-    passport.authenticate("google", { session: false, failureRedirect: "/login.html" }),
-    (req, res) => {
-      const token = generateToken(req.user.user._id);
-      res.redirect(`/auth-callback.html?token=${token}&redirect=/app`);
-    }
-  );
+  app.get("/auth/google/callback", (req, res, next) => {
+    passport.authenticate("google", { session: false, failureRedirect: "/login.html" }, (err, user) => {
+      if (err) {
+        console.error("Google OAuth callback error:", err);
+        return res.redirect("/login.html?error=oauth_error");
+      }
+      if (!user) return res.redirect("/login.html");
+
+      const token = generateToken(user.user._id);
+      const redirectUrl = `/auth-callback.html?token=${encodeURIComponent(token)}&redirect=/app`;
+      res.redirect(redirectUrl);
+    })(req, res, next);
+  });
 }
 
 app.get("/api/constants", async (req, res) => {

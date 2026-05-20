@@ -26,7 +26,7 @@ function verifyToken(token) {
 function setupPassport() {
   const clientID = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const callbackURL = process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/auth/google/callback";
+  const callbackURL = process.env.GOOGLE_CALLBACK_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/google/callback` : "http://localhost:3000/auth/google/callback");
 
   if (!clientID || !clientSecret) {
     console.log("Google OAuth: DISABLED (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable)");
@@ -39,21 +39,27 @@ function setupPassport() {
     callbackURL,
   }, async (_accessToken, _refreshToken, profile, done) => {
     try {
-      const email = profile.emails[0].value.toLowerCase();
+      const email = profile.emails?.[0]?.value?.toLowerCase();
+      if (!email) return done(new Error("Google profile email is required"));
+      if (!profile.id) return done(new Error("Google profile id is required"));
+
       let user = await User.findOne({ google_id: profile.id });
 
       if (!user) {
         user = await User.findOne({ email });
+        const avatar = profile.photos?.[0]?.value || "";
+        const name = profile.displayName || email.split("@")[0];
+
         if (user) {
           user.google_id = profile.id;
-          if (!user.avatar && profile.photos[0]) user.avatar = profile.photos[0].value;
+          if (!user.avatar && avatar) user.avatar = avatar;
           await user.save();
         } else {
           user = await User.create({
-            name: profile.displayName,
+            name,
             email,
             google_id: profile.id,
-            avatar: profile.photos[0]?.value || "",
+            avatar,
           });
         }
       }
