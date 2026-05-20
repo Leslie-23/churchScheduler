@@ -77,6 +77,8 @@ app.get("/app/*", (_req, res) => {
 });
 
 // --- Start ---
+connectDb();
+
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
   connectDb().then(() => {
