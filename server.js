@@ -37,6 +37,10 @@ if (process.env.GOOGLE_CLIENT_ID) {
   });
 }
 
+app.get("/api/config", (_req, res) => {
+  res.json({ google_oauth: !!process.env.GOOGLE_CLIENT_ID });
+});
+
 app.get("/api/constants", async (req, res) => {
   const authHeader = req.headers.authorization;
   const unitId = req.headers["x-unit-id"];

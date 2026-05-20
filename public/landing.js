@@ -22,6 +22,17 @@ function checkExistingAuth() {
   }
 }
 
+async function loadAuthConfig() {
+  try {
+    const res = await fetch("/api/config");
+    const config = await res.json();
+    if (!config.google_oauth) {
+      document.querySelectorAll(".google-btn, .auth-divider").forEach((el) => el.style.display = "none");
+    }
+  } catch {}
+}
+loadAuthConfig();
+
 async function redirectAfterAuth(token) {
   try {
     const res = await fetch("/api/auth/me", {
