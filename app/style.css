@@ -96,7 +96,9 @@ body.body-locked {
   bottom: 0;
   z-index: 50;
   transition: transform 0.2s ease;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sidebar-brand {
