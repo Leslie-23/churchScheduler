@@ -12,8 +12,17 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
   <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/app/style.css">
+  <script>if(!localStorage.getItem("auth_token"))window.location.replace("/login.html");</script>
 </head>
 <body>
+
+  <div class="splash-screen" id="splash-screen">
+    <svg viewBox="0 0 40 40" width="56" height="56" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+      <g transform="rotate(-15 20 20)"><line x1="20" y1="4" x2="20" y2="36"/><line x1="10" y1="14" x2="30" y2="14"/></g>
+    </svg>
+    <span class="splash-title">Stewardly</span>
+    <span class="splash-sub">Service Unit Scheduler</span>
+  </div>
 
   <aside class="sidebar">
     <div class="sidebar-brand">

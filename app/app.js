@@ -113,10 +113,19 @@ async function api(path, method = "GET", body = null) {
   return res.json();
 }
 
+function dismissSplash() {
+  const splash = document.getElementById("splash-screen");
+  if (!splash) return;
+  splash.classList.add("fade-out");
+  setTimeout(() => splash.classList.add("hidden"), 400);
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  const splashStart = Date.now();
+
   const token = getToken();
   if (!token) {
-    window.location.href = "/login.html";
+    window.location.replace("/login.html");
     return;
   }
 
@@ -127,7 +136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   currentMemberships = meData.memberships;
 
   if (currentMemberships.length === 0) {
-    window.location.href = "/onboarding.html";
+    window.location.replace("/onboarding.html");
     return;
   }
 
@@ -166,6 +175,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const today = new Date().toISOString().split("T")[0];
   document.getElementById("quick-date").value = today;
   document.getElementById("s-date").value = today;
+
+  const elapsed = Date.now() - splashStart;
+  const remaining = Math.max(1500 - elapsed, 0);
+  setTimeout(dismissSplash, remaining);
 });
 
 function populateUnitSwitcher() {
