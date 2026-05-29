@@ -3,83 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Member Registration — Stewardly</title>
+  <title>Member Registration - Stewardly</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Barlow', sans-serif; background: #fff; color: #0a0a0a; line-height: 1.5; padding: 2rem; }
+    body { font-family: 'Barlow', sans-serif; background: #f5f4f1; color: #0a0a0a; line-height: 1.45; padding: 2rem; }
     h1, h2, h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
-    .container { max-width: 800px; margin: 0 auto; }
-
-    .header { text-align: center; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 3px solid #0a0a0a; }
-    .header h1 { font-size: 2.5rem; }
+    .sheet { max-width: 900px; margin: 0 auto; background: #fff; padding: 2rem; border: 1.5px solid #d5d2cc; }
+    .print-toolbar { max-width: 900px; margin: 0 auto 1rem; background: #fff; border: 1.5px solid #0a0a0a; padding: 1rem; display: flex; align-items: end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .print-toolbar label { display: block; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #555; margin-bottom: 0.25rem; }
+    .print-toolbar input { width: 110px; padding: 0.55rem 0.7rem; border: 1.5px solid #d5d2cc; font-family: 'Barlow', sans-serif; font-size: 0.9rem; }
+    .toolbar-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .toolbar-actions button { padding: 0.7rem 1rem; background: #fff; color: #0a0a0a; border: 1.5px solid #0a0a0a; font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 0.78rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; }
+    .toolbar-actions button.primary { background: #1a3c34; color: #fff; border-color: #1a3c34; }
+    .header { text-align: center; margin-bottom: 1rem; padding-bottom: 0.9rem; border-bottom: 3px solid #0a0a0a; }
+    .header h1 { font-size: 2.35rem; line-height: 1; }
     .header p { color: #555; margin-top: 0.3rem; font-size: 0.9rem; }
-
-    .instructions { background: #f5f5f5; border: 1.5px solid #0a0a0a; padding: 1.25rem; margin-bottom: 2rem; font-size: 0.85rem; }
-    .instructions strong { text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.06em; }
-    .instructions ul { margin-top: 0.5rem; padding-left: 1.2rem; }
-    .instructions li { margin-bottom: 0.25rem; }
-
-    .member-block { border: 1.5px solid #0a0a0a; padding: 1.5rem; margin-bottom: 1.5rem; page-break-inside: avoid; }
-    .member-block h3 { font-size: 1.2rem; margin-bottom: 1rem; border-bottom: 2px solid #0a0a0a; padding-bottom: 0.3rem; }
-
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.8rem; }
-    .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
-    .field { }
-    .field label { display: block; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.25rem; color: #555; }
-    .field .line { border-bottom: 1.5px solid #ccc; min-height: 1.6rem; padding: 0.2rem 0; font-size: 0.9rem; }
-
-    .skills-section { margin-top: 1rem; }
-    .skills-section h4 { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; color: #555; }
-
-    .skills-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
-    .skill-item { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.6rem; border: 1px solid #ddd; font-size: 0.8rem; }
+    .meta-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+    .instructions { background: #f5f4f1; border: 1.5px solid #0a0a0a; padding: 0.85rem 1rem; margin-bottom: 1rem; font-size: 0.8rem; }
+    .instructions strong { text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.06em; }
+    .instructions ul { margin-top: 0.4rem; padding-left: 1.2rem; }
+    .instructions li { margin-bottom: 0.18rem; }
+    .member-block { border: 1.5px solid #0a0a0a; padding: 0.8rem; margin-bottom: 0.75rem; break-inside: avoid; page-break-inside: avoid; }
+    .member-block h3 { font-size: 1.05rem; margin-bottom: 0.65rem; border-bottom: 2px solid #0a0a0a; padding-bottom: 0.2rem; display: flex; justify-content: space-between; gap: 1rem; }
+    .member-block h3 span { font-family: 'Barlow', sans-serif; font-size: 0.65rem; color: #555; letter-spacing: 0.08em; text-transform: uppercase; align-self: center; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 0.6rem; }
+    .field-row.four { grid-template-columns: 0.8fr 0.9fr 1.1fr 1.2fr; }
+    .field label { display: block; font-weight: 600; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.18rem; color: #555; }
+    .field .line { border-bottom: 1.5px solid #999; min-height: 1.35rem; padding: 0.15rem 0; font-size: 0.85rem; }
+    .field .boxline { min-height: 2.4rem; border: 1.5px solid #999; }
+    .skills-section { margin-top: 0.7rem; }
+    .skills-section h4 { font-family: 'Bebas Neue', sans-serif; font-size: 0.88rem; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.4rem; color: #555; }
+    .skills-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.35rem; }
+    .skill-item { display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.45rem; border: 1px solid #bbb; font-size: 0.75rem; }
     .skill-item .name { font-weight: 600; }
     .skill-item .circles { display: flex; gap: 3px; }
-    .skill-item .circles span { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #0a0a0a; display: inline-block; }
-
-    .footer { text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1.5px solid #ccc; font-size: 0.78rem; color: #999; }
+    .skill-item .circles span { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #0a0a0a; display: inline-block; }
+    .footer { text-align: center; margin-top: 1rem; padding-top: 0.6rem; border-top: 1.5px solid #ccc; font-size: 0.72rem; color: #777; }
 
     @media print {
-      body { padding: 0.5cm; font-size: 11pt; }
-      .member-block { border-width: 1px; padding: 1rem; margin-bottom: 1rem; }
+      @page { size: A4 portrait; margin: 8mm; }
+      html, body { background: #fff; }
+      body { padding: 0; font-size: 9.5pt; line-height: 1.25; }
+      .sheet { max-width: none; width: 100%; padding: 0; border: none; }
+      .header { margin-bottom: 0.45rem; padding-bottom: 0.45rem; }
+      .header h1 { font-size: 1.75rem; }
+      .header p { font-size: 0.74rem; }
+      .meta-row { gap: 0.45rem; margin-bottom: 0.55rem; }
+      .instructions { padding: 0.45rem 0.6rem; margin-bottom: 0.6rem; font-size: 0.68rem; }
+      .instructions li { margin-bottom: 0.08rem; }
+      .member-block { border-width: 1px; padding: 0.48rem; margin-bottom: 0.45rem; }
+      .member-block h3 { font-size: 0.88rem; margin-bottom: 0.38rem; }
+      .field-row { gap: 0.45rem; margin-bottom: 0.38rem; }
+      .field label { font-size: 0.52rem; }
+      .field .line { min-height: 1.05rem; }
+      .field .boxline { min-height: 1.65rem; }
+      .skills-section { margin-top: 0.4rem; }
+      .skills-section h4 { font-size: 0.72rem; margin-bottom: 0.25rem; }
+      .skills-grid { grid-template-columns: 1fr 1fr 1fr; gap: 0.22rem; }
+      .skill-item { padding: 0.18rem 0.3rem; font-size: 0.62rem; }
+      .skill-item .circles span { width: 9px; height: 9px; border-width: 1px; }
+      .footer { margin-top: 0.4rem; padding-top: 0.35rem; font-size: 0.6rem; }
       .no-print { display: none; }
+      .print-page-break { break-after: page; page-break-after: always; }
     }
     @media (max-width: 600px) {
       body { padding: 1rem; }
-      .field-row { grid-template-columns: 1fr; }
-      .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+      .sheet { padding: 1rem; }
+      .field-row, .field-row.four, .meta-row { grid-template-columns: 1fr; }
       .skills-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="print-toolbar no-print">
+    <div>
+      <label for="form-count">Number of member forms</label>
+      <input type="number" id="form-count" min="1" max="80" value="30">
+    </div>
+    <div class="toolbar-actions">
+      <button onclick="renderForms()">Update Forms</button>
+      <button class="primary" onclick="printForms()">Print Forms</button>
+    </div>
+  </div>
+
+  <div class="sheet">
     <div class="header">
       <h1>Member Registration Form</h1>
-      <p>Stewardly — Smart Duty Scheduling for Church Teams</p>
+      <p>Stewardly - Smart Duty Scheduling for Church Teams</p>
+    </div>
+
+    <div class="meta-row">
+      <div class="field">
+        <label>Unit / Department</label>
+        <div class="line"></div>
+      </div>
+      <div class="field">
+        <label>Collection Date</label>
+        <div class="line"></div>
+      </div>
+      <div class="field">
+        <label>Collected By</label>
+        <div class="line"></div>
+      </div>
     </div>
 
     <div class="instructions">
       <strong>Instructions</strong>
       <ul>
-        <li><strong>Full Name</strong> — as you'd like it displayed on the duty roster</li>
-        <li><strong>Phone</strong> — WhatsApp-enabled number preferred (for notifications)</li>
-        <li><strong>Gender</strong> — M or F (some positions require male members)</li>
-        <li><strong>Own a Suit?</strong> — Yes or No (some positions require formal attire)</li>
-        <li><strong>Service Availability</strong> — circle one: Both / 1st Only / 2nd Only (which services you can attend)</li>
-        <li><strong>Skills</strong> — fill in the circles to rate yourself: 1 = still learning, 5 = very experienced. Leave blank if you've never done that role.</li>
+        <li><strong>Full Name</strong> - as it should appear on the duty roster</li>
+        <li><strong>Phone</strong> - WhatsApp-enabled number preferred for reminders</li>
+        <li><strong>Availability</strong> - circle Both, 1st Only, or 2nd Only</li>
+        <li><strong>Skills</strong> - fill circles from 1 learning to 5 expert; leave blank if never served there</li>
       </ul>
     </div>
 
     <div id="forms-container"></div>
 
-    <div class="no-print" style="text-align:center; margin: 2rem 0;">
-      <button onclick="window.print()" style="padding:0.7rem 2rem; background:#0a0a0a; color:#fff; border:none; font-family:'Barlow',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; text-transform:uppercase; letter-spacing:0.06em;">Print / Save as PDF</button>
-    </div>
-
     <div class="footer">
-      Stewardly — Member Data Collection Form
+      Stewardly - Member Data Collection Form
     </div>
   </div>
 
@@ -87,25 +129,25 @@
     const POSITIONS = [
       { key: "DOOR", label: "Door" },
       { key: "STANDING", label: "Standing" },
-      // { key: "USHER", label: "Usher" },
+      { key: "USHER", label: "Usher" },
       { key: "OVERFLOW", label: "Overflow" },
       { key: "ESCORT", label: "Escort" },
       { key: "CHAIRS", label: "Chairs" },
     ];
 
     function createMemberBlock(num) {
-      const skillsHtml = POSITIONS.map(p =>
+      const skillsHtml = POSITIONS.map((p) =>
         `<div class="skill-item">
           <span class="name">${p.label}</span>
           <div class="circles">
-            ${[1,2,3,4,5].map(() => `<span></span>`).join("")}
+            ${[1, 2, 3, 4, 5].map(() => "<span></span>").join("")}
           </div>
         </div>`
       ).join("");
 
       return `
-        <div class="member-block">
-          <h3>Member #${num}</h3>
+        <div class="member-block ${num % 4 === 0 ? "print-page-break" : ""}">
+          <h3>Member #${num}<span>Office use: ID __________</span></h3>
           <div class="field-row">
             <div class="field">
               <label>Full Name</label>
@@ -116,36 +158,51 @@
               <div class="line"></div>
             </div>
           </div>
-          <div class="field-row" style="grid-template-columns:1fr 1fr 1fr 1fr">
+          <div class="field-row four">
             <div class="field">
-              <label>Gender (M / F)</label>
+              <label>Gender: M / F</label>
               <div class="line"></div>
             </div>
             <div class="field">
-              <label>Own a Suit? (Yes / No)</label>
+              <label>Own a Suit: Yes / No</label>
               <div class="line"></div>
             </div>
             <div class="field">
-              <label>Availability (Both / 1st / 2nd)</label>
+              <label>Availability: Both / 1st / 2nd</label>
               <div class="line"></div>
             </div>
             <div class="field">
-              <label>Email (optional)</label>
+              <label>Email Optional</label>
               <div class="line"></div>
             </div>
           </div>
           <div class="skills-section">
-            <h4>Skills — fill circles: 1 (learning) to 5 (expert)</h4>
+            <h4>Skills - fill circles: 1 learning to 5 expert</h4>
             <div class="skills-grid">${skillsHtml}</div>
+          </div>
+          <div class="field" style="margin-top:0.6rem">
+            <label>Notes / Restrictions</label>
+            <div class="boxline"></div>
           </div>
         </div>
       `;
     }
 
-    const container = document.getElementById("forms-container");
-    for (let i = 1; i <= 30; i++) {
-      container.innerHTML += createMemberBlock(i);
+    function renderForms() {
+      const countInput = document.getElementById("form-count");
+      const count = Math.max(1, Math.min(80, parseInt(countInput.value, 10) || 30));
+      countInput.value = count;
+      const container = document.getElementById("forms-container");
+      container.innerHTML = "";
+      for (let i = 1; i <= count; i++) container.innerHTML += createMemberBlock(i);
     }
+
+    function printForms() {
+      renderForms();
+      window.print();
+    }
+
+    renderForms();
   </script>
 </body>
 </html>
