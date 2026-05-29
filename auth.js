@@ -1,10 +1,16 @@
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { User, UnitMembership } = require("./database");
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+const isDeployed = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+if (!process.env.JWT_SECRET && isDeployed) {
+  throw new Error("JWT_SECRET must be set in production");
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString("hex");
 const JWT_EXPIRY = "7d";
 
 function hashPassword(plain) {

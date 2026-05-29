@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { Unavailability } = require("../database");
+const { Member, Unavailability } = require("../database");
 
 router.get("/", async (req, res) => {
   const filter = { unit: req.unit._id };
@@ -17,12 +17,16 @@ router.get("/", async (req, res) => {
 
 router.post("/", async (req, res) => {
   const { member_id, date, reason } = req.body;
+  if (!member_id || !date) return res.status(400).json({ error: "member_id and date are required" });
 
   if (req.membership.role === "member") {
     if (!req.membership.member || req.membership.member.toString() !== member_id) {
       return res.status(403).json({ error: "Members can only mark themselves unavailable" });
     }
   }
+
+  const member = await Member.findOne({ _id: member_id, unit: req.unit._id }).select("_id").lean();
+  if (!member) return res.status(404).json({ error: "Member not found" });
 
   try {
     const record = await Unavailability.create({ unit: req.unit._id, member: member_id, date, reason });

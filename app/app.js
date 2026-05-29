@@ -20,6 +20,15 @@ const pageTitles = {
 
 let aiHistory = [];
 
+function canAccessPage(page) {
+  if (["settings", "sms", "reports"].includes(page)) return activeRole === "owner" || activeRole === "admin";
+  return !!pageTitles[page];
+}
+
+function canManage() {
+  return activeRole === "owner" || activeRole === "admin";
+}
+
 function toast(message, type = "info", duration = 3000) {
   const container = document.getElementById("toast-container");
   const el = document.createElement("div");
@@ -113,7 +122,7 @@ async function api(path, method = "GET", body = null) {
   }
   if (res.status === 409) {
     const data = await res.json().catch(() => ({}));
-    toast(data.error || "Conflict — this action was already performed.", "warning");
+    toast(data.error || "Conflict - this action was already performed.", "warning");
     return null;
   }
   if (!res.ok) {
@@ -351,6 +360,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
   setupSuitToggle();
   populateServiceTypeSelects();
+  const initialPage = location.hash ? location.hash.slice(1) : localStorage.getItem("active_page") || "dashboard";
+  showPage(canAccessPage(initialPage) ? initialPage : "dashboard", { skipReload: true });
   loadDashboard();
   loadMembers();
   loadServices();
@@ -395,6 +406,8 @@ async function switchUnit(unitId) {
   if (activeRole !== "member") loadSettings();
   currentServiceId = null;
   document.getElementById("schedule-detail").style.display = "none";
+  const activePage = localStorage.getItem("active_page") || "dashboard";
+  if (!canAccessPage(activePage)) showPage("dashboard");
 }
 
 function renderUserInfo() {
@@ -419,7 +432,8 @@ function logout() {
   window.location.href = "/";
 }
 
-function showPage(page) {
+function showPage(page, opts = {}) {
+  if (!canAccessPage(page)) page = "dashboard";
   document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
   document.querySelectorAll(".nav-link").forEach((l) => l.classList.remove("active"));
   const el = document.getElementById("page-" + page);
@@ -427,9 +441,17 @@ function showPage(page) {
   const nav = document.querySelector(`[data-page="${page}"]`);
   if (nav) nav.classList.add("active");
   document.getElementById("page-title").textContent = pageTitles[page] || page;
+  localStorage.setItem("active_page", page);
+  if (location.hash !== `#${page}`) history.replaceState(null, "", `#${page}`);
   closeSidebar();
+  if (opts.skipReload) return;
+  if (page === "dashboard") loadDashboard();
+  if (page === "members") loadMembers();
+  if (page === "schedule") loadServices();
+  if (page === "settings" && activeRole !== "member") loadSettings();
   if (page === "profile") loadProfile();
-  if (page === "sms") { checkSMSStatus(); }
+  if (page === "sms") checkSMSStatus();
+  if (page === "reports") checkAIStatus();
 }
 
 function setupNav() {
@@ -438,7 +460,6 @@ function setupNav() {
       e.preventDefault();
       const page = a.dataset.page;
       showPage(page);
-      if (page === "dashboard") loadDashboard();
     });
   });
 }
@@ -516,7 +537,7 @@ async function loadDashboard() {
       .join("");
   }
 
-  if (activeRole === "owner" || activeRole === "admin") {
+  if (canManage()) {
     loadFollowUp();
     loadDashboardJoinRequests();
   }
@@ -533,7 +554,7 @@ async function loadDashboardJoinRequests() {
   alert.onclick = () => showPage("profile");
   alert.innerHTML = `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-    <span><strong>${requests.length}</strong> pending join request${requests.length > 1 ? "s" : ""} — tap to review</span>
+    <span><strong>${requests.length}</strong> pending join request${requests.length > 1 ? "s" : ""} - tap to review</span>
   `;
   card.style.display = "block";
   card.querySelector(".card-body").prepend(alert);
@@ -596,7 +617,7 @@ async function loadMembers() {
   }
   empty.style.display = "none";
 
-  const isAdmin = activeRole === "owner" || activeRole === "admin";
+  const isAdmin = canManage();
 
   const availLabels = { both: "Both", first_only: "1st", second_only: "2nd" };
   tbody.innerHTML = membersCache
@@ -612,7 +633,7 @@ async function loadMembers() {
       </td>
       <td data-label="Gender"><span class="badge badge-${m.gender === "M" ? "male" : "female"}">${m.gender === "M" ? "M" : "F"}</span></td>
       <td data-label="Suit">${m.has_suit ? '<span class="badge badge-suit">Suit</span>' : '<span style="color:var(--gray-400)">&mdash;</span>'}</td>
-      <td data-label="Phone" style="color:var(--gray-600); font-size:0.82rem">${esc(m.phone || "—")}</td>
+      <td data-label="Phone" style="color:var(--stone-500); font-size:0.82rem">${esc(m.phone || "-")}</td>
       <td data-label="Availability"><span class="badge">${availLabels[m.service_availability] || "Both"}</span></td>
       <td data-label="Status"><span class="badge badge-${m.active ? "active" : "inactive"}">${m.active ? "Active" : "Off"}</span></td>
       <td data-label="" onclick="event.stopPropagation()">
@@ -669,7 +690,7 @@ async function toggleMemberDetail(id, rowEl) {
     : "var(--gray-400)";
   const attHtml = attendance && attendance.rate !== null
     ? `<div style="font-family:var(--font-display); font-size:2rem; color:${attColor}">${attendance.rate}%</div>
-       <div style="font-size:0.7rem; color:var(--gray-600)">${attendance.present} present &middot; ${attendance.absent} absent &middot; ${attendance.excused} excused</div>
+       <div style="font-size:0.7rem; color:var(--stone-500)">${attendance.present} present &middot; ${attendance.absent} absent &middot; ${attendance.excused} excused</div>
        <div class="attendance-bar"><div class="attendance-bar-fill" style="width:${attendance.rate}%; background:${attColor}"></div></div>`
     : '<span style="color:var(--gray-400); font-size:0.78rem">No attendance data yet</span>';
 
@@ -679,7 +700,7 @@ async function toggleMemberDetail(id, rowEl) {
           const attBadge = h.attendance && h.attendance !== "pending"
             ? ` <span class="badge badge-${h.attendance}" style="font-size:0.55rem">${h.attendance}</span>`
             : "";
-          return `<div class="history-item"><strong>${formatDateShort(h.date)}</strong> ${CONSTANTS.positionTypes[h.position_type]?.label || h.position_type} — ${CONSTANTS.serviceTypes[h.service_type] || h.service_type}${attBadge}</div>`;
+          return `<div class="history-item"><strong>${formatDateShort(h.date)}</strong> ${CONSTANTS.positionTypes[h.position_type]?.label || h.position_type} - ${CONSTANTS.serviceTypes[h.service_type] || h.service_type}${attBadge}</div>`;
         })
         .join("")
     : '<span style="color:var(--gray-400); font-size:0.78rem">No history yet</span>';
@@ -865,7 +886,7 @@ async function loadServices() {
   }
   empty.style.display = "none";
 
-  const isAdmin = activeRole === "owner" || activeRole === "admin";
+  const isAdmin = canManage();
 
   tbody.innerHTML = services
     .map(
@@ -874,7 +895,7 @@ async function loadServices() {
       <td data-label="Date"><strong>${formatDate(s.date)}</strong></td>
       <td data-label="Type">${CONSTANTS.serviceTypes[s.service_type] || s.service_type}</td>
       <td data-label="Slot"><span class="badge">${s.service_slot === 2 ? "2nd" : "1st"}</span></td>
-      <td data-label="Name" style="color:var(--gray-600)">${esc(s.name || "—")}</td>
+      <td data-label="Name" style="color:var(--stone-500)">${esc(s.name || "-")}</td>
       <td data-label="Status"><span class="badge badge-${s.status}">${s.status}</span></td>
       <td data-label="" onclick="event.stopPropagation()">
         <div class="btn-group">
@@ -937,7 +958,7 @@ async function viewSchedule(serviceId) {
   detail.style.display = "block";
   const slotLabel = service.service_slot === 2 ? " (2nd Service)" : " (1st Service)";
   document.getElementById("schedule-detail-title").textContent =
-    `${formatDate(service.date)} — ${CONSTANTS.serviceTypes[service.service_type] || service.service_type}${slotLabel}${service.name ? " — " + service.name : ""}`;
+    `${formatDate(service.date)} - ${CONSTANTS.serviceTypes[service.service_type] || service.service_type}${slotLabel}${service.name ? " - " + service.name : ""}`;
 
   const publishBtn = document.getElementById("btn-publish");
   if (service.status === "published") {
@@ -1039,7 +1060,7 @@ async function loadAssignments(serviceId) {
   }
   empty.style.display = "none";
 
-  const isAdmin = activeRole === "owner" || activeRole === "admin";
+  const isAdmin = canManage();
 
   const grouped = {};
   for (const a of assignments) {
@@ -1092,6 +1113,7 @@ async function loadAssignments(serviceId) {
 }
 
 async function generateCurrentSchedule(btn) {
+  if (!canManage()) return toast("Only admins can generate schedules.", "warning");
   if (!currentServiceId) return;
   if (isBusy("generate")) return toast("Schedule generation in progress...", "warning");
   markBusy("generate");
@@ -1110,7 +1132,7 @@ async function generateCurrentSchedule(btn) {
         </div>`;
       toast("Schedule generated with warnings", "warning");
     } else {
-      toast(`Schedule generated — ${result.assignments.length} assigned`, "success");
+      toast(`Schedule generated - ${result.assignments.length} assigned`, "success");
     }
     await loadAssignments(currentServiceId);
   } finally {
@@ -1121,11 +1143,13 @@ async function generateCurrentSchedule(btn) {
 }
 
 async function regenerateSchedule(btn) {
+  if (!canManage()) return toast("Only admins can regenerate schedules.", "warning");
   if (!confirm("Replace current schedule with a new one?")) return;
   await generateCurrentSchedule(btn);
 }
 
 async function publishSchedule() {
+  if (!canManage()) return toast("Only admins can publish schedules.", "warning");
   if (!currentServiceId) return;
   const services = await api("/services");
   if (!services) return;
@@ -1153,7 +1177,7 @@ async function openReplaceModal(assignmentId, positionType, memberId, memberName
       <div class="assignment-avatar">${getInitials(memberName)}</div>
       <div class="info">
         <strong>${esc(memberName)}</strong>
-        <span>Removing from ${CONSTANTS.positionTypes[positionType]?.label || positionType} — will be marked unavailable</span>
+        <span>Removing from ${CONSTANTS.positionTypes[positionType]?.label || positionType} - will be marked unavailable</span>
       </div>
     </div>
   `;
@@ -1335,6 +1359,7 @@ document.addEventListener("click", (e) => {
 });
 
 async function removeAssignment(id) {
+  if (!canManage()) return toast("Only admins can remove assignments.", "warning");
   const result = await api(`/services/assignments/${id}`, "DELETE");
   if (result) toast("Assignment removed", "success");
   loadAssignments(currentServiceId);
@@ -1343,6 +1368,7 @@ async function removeAssignment(id) {
 // --- Quick Generate ---
 
 async function quickGenerate() {
+  if (!canManage()) return toast("Only admins can create schedules.", "warning");
   const date = document.getElementById("quick-date").value;
   const type = document.getElementById("quick-type").value;
   const slot = parseInt(document.getElementById("quick-slot").value) || 1;
@@ -1413,7 +1439,7 @@ function loadPositionTypesEditor() {
     <div class="settings-type-item" data-key="${esc(key)}">
       <div style="flex:1">
         <strong>${esc(pos.label)}</strong>
-        <span style="color:var(--gray-600); font-size:0.78rem; margin-left:0.3rem">${esc(pos.description || "")}</span>
+        <span style="color:var(--stone-500); font-size:0.78rem; margin-left:0.3rem">${esc(pos.description || "")}</span>
         ${reqs.length ? `<span class="badge" style="font-size:0.6rem; margin-left:0.3rem">${reqs.join(" + ")}</span>` : ""}
       </div>
       ${isOwner ? `<div class="btn-group">
@@ -1660,7 +1686,7 @@ async function askAI(question) {
   responseDiv.innerHTML = `
     <div class="ai-response-box ai-thinking">
       <div class="loader" style="justify-content:center;margin-bottom:0.75rem"><span></span><span></span><span></span></div>
-      <p style="text-align:center; color:var(--gray-600); text-transform:uppercase; letter-spacing:0.1em; font-size:0.78rem; font-weight:600">Analyzing your team data...</p>
+      <p style="text-align:center; color:var(--stone-500); text-transform:uppercase; letter-spacing:0.1em; font-size:0.78rem; font-weight:600">Analyzing your team data...</p>
     </div>`;
 
   document.querySelectorAll(".ai-quick-actions button, #ai-question").forEach(el => el.disabled = true);
@@ -1758,7 +1784,7 @@ async function loadSMSServices() {
     return;
   }
   sel.innerHTML = services.map((s) =>
-    `<option value="${s._id}">${formatDate(s.date)} — ${CONSTANTS.serviceTypes[s.service_type] || s.service_type}${s.name ? " — " + esc(s.name) : ""}</option>`
+    `<option value="${s._id}">${formatDate(s.date)} - ${CONSTANTS.serviceTypes[s.service_type] || s.service_type}${s.name ? " - " + esc(s.name) : ""}</option>`
   ).join("");
   updateSMSPreview();
 }
@@ -1770,7 +1796,7 @@ function updateSMSPreview() {
   const opt = sel.options[sel.selectedIndex];
   preview.style.display = "";
   document.getElementById("sms-preview-text").textContent =
-    `Hi [Name], you will be serving at [Position] on ${opt.textContent.split(" — ")[0]}. Ensure to be on time for our unit prayers. God bless!`;
+    `Hi [Name], you will be serving at [Position] on ${opt.textContent.split(" - ")[0]}. Ensure to be on time for our unit prayers. God bless!`;
 }
 
 async function sendDutyNotifications(btn) {
@@ -1791,7 +1817,7 @@ async function sendDutyNotifications(btn) {
       html += '<div style="font-size:0.78rem; max-height:200px; overflow-y:auto">';
       for (const d of result.details) {
         const color = d.status === "sent" ? "var(--green)" : d.status === "skipped" ? "var(--yellow)" : "var(--red)";
-        html += `<div style="padding:0.25rem 0; border-bottom:1px solid var(--gray-200); color:${color}"><strong>${esc(d.name)}</strong> — ${d.status}${d.reason ? " (" + esc(d.reason) + ")" : ""}</div>`;
+        html += `<div style="padding:0.25rem 0; border-bottom:1px solid var(--stone-200); color:${color}"><strong>${esc(d.name)}</strong> - ${d.status}${d.reason ? " (" + esc(d.reason) + ")" : ""}</div>`;
       }
       html += "</div>";
     }

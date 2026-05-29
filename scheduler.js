@@ -23,48 +23,68 @@ async function getEligibleMembers(date, positionType, unitId, positionTypes, ser
   });
 }
 
-async function getDaysSinceLastAssignment(memberId, date, positionType) {
-  const filter = { member: memberId };
-  if (positionType) filter.position_type = positionType;
+async function getMemberStats(members, date, unitId) {
+  const memberIds = members.map((m) => m._id);
+  const stats = new Map(memberIds.map((id) => [id.toString(), {
+    daysSinceAny: 999,
+    daysSinceByPosition: {},
+    attendanceRate: 1,
+  }]));
+  if (memberIds.length === 0) return stats;
 
-  const assignments = await Assignment.find(filter).populate("service").lean();
+  const history = await Assignment.find({ member: { $in: memberIds } })
+    .populate("service")
+    .sort({ _id: -1 })
+    .lean();
 
-  let minDays = 999;
   const targetDate = new Date(date + "T00:00:00Z");
+  const recentAttendance = new Map();
 
-  for (const a of assignments) {
-    if (!a.service) continue;
+  for (const a of history) {
+    if (!a.service || a.service.unit.toString() !== unitId.toString()) continue;
+    const memberId = a.member.toString();
+    const stat = stats.get(memberId);
+    if (!stat) continue;
+
+    if (a.attendance && a.attendance !== "pending") {
+      const recent = recentAttendance.get(memberId) || [];
+      if (recent.length < 10) {
+        recent.push(a.attendance);
+        recentAttendance.set(memberId, recent);
+      }
+    }
+
     const serviceDate = new Date(a.service.date + "T00:00:00Z");
     if (serviceDate >= targetDate) continue;
     const days = (targetDate - serviceDate) / (1000 * 60 * 60 * 24);
-    if (days < minDays) minDays = days;
+    if (days < stat.daysSinceAny) stat.daysSinceAny = days;
+    if (days < (stat.daysSinceByPosition[a.position_type] ?? 999)) {
+      stat.daysSinceByPosition[a.position_type] = days;
+    }
   }
 
-  return minDays;
+  for (const [memberId, recent] of recentAttendance.entries()) {
+    const attended = recent.filter((status) => status === "present" || status === "excused").length;
+    stats.get(memberId).attendanceRate = attended / recent.length;
+  }
+
+  return stats;
 }
 
-async function getAttendanceRate(memberId) {
-  const recent = await Assignment.find({ member: memberId, attendance: { $ne: "pending" } })
-    .sort({ _id: -1 })
-    .limit(10)
-    .lean();
-
-  if (recent.length === 0) return 1;
-  const attended = recent.filter((a) => a.attendance === "present" || a.attendance === "excused").length;
-  return attended / recent.length;
-}
-
-async function scoreMember(member, date, positionType) {
+function scoreMember(member, positionType, memberStats) {
   const skillScore = member.skill_rating * 2;
+  const stats = memberStats.get(member._id.toString()) || {
+    daysSinceAny: 999,
+    daysSinceByPosition: {},
+    attendanceRate: 1,
+  };
 
-  const daysSinceAny = await getDaysSinceLastAssignment(member._id, date);
-  const rotationScore = Math.min(daysSinceAny, 30) / 3;
+  const rotationScore = Math.min(stats.daysSinceAny, 30) / 3;
 
-  const daysSinceThis = await getDaysSinceLastAssignment(member._id, date, positionType);
+  const daysSinceThis = stats.daysSinceByPosition[positionType] ?? 999;
   const varietyScore = Math.min(daysSinceThis, 60) / 6;
 
-  const attendanceRate = await getAttendanceRate(member._id);
-  const reliabilityScore = attendanceRate * 5;
+  const reliabilityScore = stats.attendanceRate * 5;
 
   return skillScore + rotationScore + varietyScore + reliabilityScore;
 }
@@ -96,11 +116,8 @@ async function generateSchedule(serviceId) {
       (m) => !assignedIds.has(m._id.toString())
     );
 
-    const scored = [];
-    for (const m of eligible) {
-      const score = await scoreMember(m, service.date, positionType);
-      scored.push({ member: m, score });
-    }
+    const memberStats = await getMemberStats(eligible, service.date, unitId);
+    const scored = eligible.map((m) => ({ member: m, score: scoreMember(m, positionType, memberStats) }));
     scored.sort((a, b) => b.score - a.score);
 
     let filled = 0;
@@ -138,19 +155,21 @@ async function suggestReplacements(serviceId, positionType, removeMemberId) {
     (m) => !alreadyAssignedIds.has(m._id.toString())
   );
 
+  const memberStats = await getMemberStats(eligible, service.date, unitId);
   const suggestions = [];
   for (const m of eligible) {
-    const score = await scoreMember(m, service.date, positionType);
-    const daysSinceAny = await getDaysSinceLastAssignment(m._id, service.date);
-    const daysSinceThis = await getDaysSinceLastAssignment(m._id, service.date, positionType);
+    const score = scoreMember(m, positionType, memberStats);
+    const stats = memberStats.get(m._id.toString()) || { daysSinceAny: 999, daysSinceByPosition: {} };
+    const daysSinceAny = stats.daysSinceAny;
+    const daysSinceThis = stats.daysSinceByPosition[positionType] ?? 999;
 
     const pos = positionTypes[positionType] || {};
     const reasons = [];
     if (m.skill_rating >= 4) reasons.push(`High ${(pos.label || positionType).toLowerCase()} skill (${m.skill_rating}/5)`);
     else if (m.skill_rating >= 3) reasons.push(`Decent ${(pos.label || positionType).toLowerCase()} skill (${m.skill_rating}/5)`);
 
-    if (daysSinceAny >= 14) reasons.push("Has been resting — due for rotation");
-    else if (daysSinceAny >= 7) reasons.push("Served last week — fair rotation");
+    if (daysSinceAny >= 14) reasons.push("Has been resting - due for rotation");
+    else if (daysSinceAny >= 7) reasons.push("Served last week - fair rotation");
 
     if (daysSinceThis >= 30) reasons.push("Fresh to this position");
     if (m.has_suit && pos.requiresSuit) reasons.push("Has suit");

@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { Member, Service, Assignment } = require("../database");
+const { Member, Service, Assignment, getUnitPositionTypes } = require("../database");
 const { requireRole } = require("../middleware");
 
 const ARKESEL_API_KEY = process.env.ARKESEL_API_KEY;
@@ -42,10 +42,7 @@ router.post("/notify-service", requireRole("owner", "admin"), async (req, res) =
 
   const results = { sent: 0, skipped: 0, failed: 0, details: [] };
 
-  const positionLabels = {
-    DOOR: "Door", STANDING: "Standing", USHER: "Usher",
-    OVERFLOW: "Overflow / Parking", ESCORT: "Preacher Escort", CHAIRS: "Chair Arrangement",
-  };
+  const positionTypes = getUnitPositionTypes(req.unit);
 
   const d = new Date(service.date + "T00:00:00");
   const dateStr = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
@@ -61,7 +58,7 @@ router.post("/notify-service", requireRole("owner", "admin"), async (req, res) =
       continue;
     }
 
-    const position = positionLabels[a.position_type] || a.position_type;
+    const position = positionTypes[a.position_type]?.label || a.position_type;
     const message = `Hi ${member.name.split(" ")[0]}, you will be serving at ${position} on ${dateStr}. Ensure to be on time for our unit prayers. God bless!`;
 
     try {

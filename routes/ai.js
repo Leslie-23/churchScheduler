@@ -22,16 +22,16 @@ router.post("/report", requireRole("owner", "admin"), async (req, res) => {
 
   const unitId = req.unit._id;
 
-  const [members, services, assignments, unavails] = await Promise.all([
+  const [members, services, unavails] = await Promise.all([
     Member.find({ unit: unitId }).lean(),
     Service.find({ unit: unitId }).sort({ date: -1 }).limit(20).lean(),
-    Assignment.find().populate("member").populate("service").lean(),
     Unavailability.find({ unit: unitId }).populate("member").lean(),
   ]);
 
-  const unitAssignments = assignments.filter(
-    (a) => a.service && a.service.unit && a.service.unit.toString() === unitId.toString()
-  );
+  const unitAssignments = await Assignment.find({ service: { $in: services.map((s) => s._id) } })
+    .populate("member")
+    .populate("service")
+    .lean();
 
   const memberSummary = members.map((m) => ({
     name: m.name, gender: m.gender, has_suit: m.has_suit, active: m.active,

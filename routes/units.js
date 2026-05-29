@@ -225,19 +225,20 @@ router.put("/:id/members/:membershipId/role", requireUnit, requireRole("owner", 
   const { role } = req.body;
   if (!["admin", "member"].includes(role)) return res.status(400).json({ error: "Invalid role" });
 
-  const target = await UnitMembership.findById(req.params.membershipId);
+  const target = await UnitMembership.findOne({ _id: req.params.membershipId, unit: req.unit._id });
   if (!target) return res.status(404).json({ error: "Membership not found" });
   if (target.role === "owner") return res.status(400).json({ error: "Cannot change owner's role" });
   if (req.membership.role === "admin" && target.role === "admin") {
     return res.status(403).json({ error: "Admins cannot demote other admins" });
   }
 
-  await UnitMembership.findByIdAndUpdate(req.params.membershipId, { role });
+  target.role = role;
+  await target.save();
   res.json({ success: true });
 });
 
 router.delete("/:id/members/:membershipId", requireUnit, requireRole("owner", "admin"), async (req, res) => {
-  const membership = await UnitMembership.findById(req.params.membershipId);
+  const membership = await UnitMembership.findOne({ _id: req.params.membershipId, unit: req.unit._id });
   if (!membership) return res.status(404).json({ error: "Membership not found" });
   if (membership.role === "owner") return res.status(400).json({ error: "Cannot remove owner" });
   if (req.membership.role === "admin" && membership.role === "admin") {
@@ -249,7 +250,16 @@ router.delete("/:id/members/:membershipId", requireUnit, requireRole("owner", "a
 
 router.put("/:id/members/:membershipId/link", requireUnit, requireRole("owner", "admin"), async (req, res) => {
   const { member_id } = req.body;
-  await UnitMembership.findByIdAndUpdate(req.params.membershipId, { member: member_id || null });
+  const membership = await UnitMembership.findOne({ _id: req.params.membershipId, unit: req.unit._id });
+  if (!membership) return res.status(404).json({ error: "Membership not found" });
+
+  if (member_id) {
+    const member = await Member.findOne({ _id: member_id, unit: req.unit._id }).select("_id").lean();
+    if (!member) return res.status(404).json({ error: "Member not found" });
+  }
+
+  membership.member = member_id || null;
+  await membership.save();
   res.json({ success: true });
 });
 

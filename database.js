@@ -130,9 +130,19 @@ const PositionCount = mongoose.model("PositionCount", positionCountSchema);
 
 // --- Init ---
 
+let connectionPromise = null;
+
 async function connectDb() {
-  await mongoose.connect(MONGO_URI);
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (!connectionPromise) {
+    connectionPromise = mongoose.connect(MONGO_URI).catch((err) => {
+      connectionPromise = null;
+      throw err;
+    });
+  }
+  await connectionPromise;
   console.log("Connected to MongoDB");
+  return mongoose.connection;
 }
 
 function getUnitPositionTypes(unit) {

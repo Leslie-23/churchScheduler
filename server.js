@@ -2,11 +2,24 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const passport = require("passport");
-const { connectDb, DEFAULT_POSITION_TYPES, DEFAULT_SERVICE_TYPES, Unit, getUnitPositionTypes, getUnitServiceTypes } = require("./database");
-const { setupPassport, generateToken } = require("./auth");
-const { requireAuth, requireAuthPage, requireUnit } = require("./middleware");
+const { connectDb, DEFAULT_POSITION_TYPES, DEFAULT_SERVICE_TYPES, Unit, UnitMembership, getUnitPositionTypes, getUnitServiceTypes } = require("./database");
+const { setupPassport, generateToken, verifyToken } = require("./auth");
+const { requireAuth, requireUnit } = require("./middleware");
 
 const app = express();
+
+const routerProto = Object.getPrototypeOf(express.Router());
+for (const method of ["get", "post", "put", "patch", "delete"]) {
+  const original = routerProto[method];
+  routerProto[method] = function patchedRouterMethod(path, ...handlers) {
+    return original.call(this, path, ...handlers.map((handler) => {
+      if (typeof handler !== "function" || handler.length === 4) return handler;
+      return function asyncRouteHandler(req, res, next) {
+        Promise.resolve(handler(req, res, next)).catch(next);
+      };
+    }));
+  };
+}
 
 app.use(express.json());
 app.use(passport.initialize());
@@ -46,6 +59,11 @@ app.get("/api/constants", async (req, res) => {
   const unitId = req.headers["x-unit-id"];
   if (authHeader && unitId) {
     try {
+      const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+      if (!token) throw new Error("Invalid auth header");
+      const decoded = verifyToken(token);
+      const membership = await UnitMembership.findOne({ user: decoded.userId, unit: unitId }).lean();
+      if (!membership) throw new Error("Not a unit member");
       const unit = await Unit.findById(unitId).lean();
       if (unit) {
         return res.json({
@@ -76,12 +94,18 @@ app.get("/app/*", (_req, res) => {
   res.sendFile(path.join(__dirname, "app", "index.html"));
 });
 
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: "Internal server error" });
+});
+
 // --- Start ---
-connectDb();
+const dbReady = connectDb();
 
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
-  connectDb().then(() => {
+  dbReady.then(() => {
     app.listen(PORT, () => {
       console.log(`Stewardly running at http://localhost:${PORT}`);
       if (process.env.GROQ_API_KEY) console.log("Groq AI reporting: ENABLED");
