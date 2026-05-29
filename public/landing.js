@@ -12,6 +12,11 @@ function clearError() {
 }
 
 function googleLogin() {
+  const btn = document.querySelector(".google-btn");
+  if (btn && btn.dataset.enabled === "false") {
+    showError("Google sign-in is currently unavailable. Use email and password instead.");
+    return;
+  }
   window.location.href = "/auth/google";
 }
 
@@ -26,9 +31,14 @@ async function loadAuthConfig() {
   try {
     const res = await fetch("/api/config");
     const config = await res.json();
-    if (!config.google_oauth) {
-      document.querySelectorAll(".google-btn, .auth-divider").forEach((el) => el.style.display = "none");
-    }
+    document.querySelectorAll(".google-btn").forEach((el) => {
+      el.dataset.enabled = config.google_oauth ? "true" : "false";
+      if (!config.google_oauth) {
+        el.disabled = true;
+        el.title = "Google sign-in is unavailable";
+      }
+    });
+    if (!config.google_oauth) document.querySelectorAll(".google-btn, .auth-divider").forEach((el) => el.style.display = "none");
   } catch {}
 }
 loadAuthConfig();

@@ -34,7 +34,7 @@ function setupPassport() {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const callbackURL = process.env.GOOGLE_CALLBACK_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/auth/google/callback` : "http://localhost:3000/auth/google/callback");
 
-  if (!clientID || !clientSecret) {
+  if (process.env.GOOGLE_OAUTH_ENABLED === "false" || !clientID || !clientSecret) {
     console.log("Google OAuth: DISABLED (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable)");
     return;
   }

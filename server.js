@@ -32,7 +32,9 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/api/auth", require("./routes/auth"));
 
 // --- Google OAuth ---
-if (process.env.GOOGLE_CLIENT_ID) {
+const googleOAuthEnabled = process.env.GOOGLE_OAUTH_ENABLED !== "false" && !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
+
+if (googleOAuthEnabled) {
   app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"], session: false }));
 
   app.get("/auth/google/callback", (req, res, next) => {
@@ -51,7 +53,7 @@ if (process.env.GOOGLE_CLIENT_ID) {
 }
 
 app.get("/api/config", (_req, res) => {
-  res.json({ google_oauth: !!process.env.GOOGLE_CLIENT_ID });
+  res.json({ google_oauth: googleOAuthEnabled });
 });
 
 app.get("/api/constants", async (req, res) => {
@@ -110,8 +112,8 @@ if (!process.env.VERCEL) {
       console.log(`Stewardly running at http://localhost:${PORT}`);
       if (process.env.GROQ_API_KEY) console.log("Groq AI reporting: ENABLED");
       else console.log("Groq AI reporting: DISABLED (set GROQ_API_KEY to enable)");
-      if (process.env.GOOGLE_CLIENT_ID) console.log("Google OAuth: ENABLED");
-      else console.log("Google OAuth: DISABLED (set GOOGLE_CLIENT_ID to enable)");
+      if (googleOAuthEnabled) console.log("Google OAuth: ENABLED");
+      else console.log("Google OAuth: DISABLED (set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable)");
       if (process.env.ARKESEL_API_KEY) console.log("Arkesel SMS: ENABLED");
       else console.log("Arkesel SMS: DISABLED (set ARKESEL_API_KEY to enable)");
     });
